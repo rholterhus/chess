@@ -3,6 +3,36 @@ import logo from './logo.svg';
 import './App.css';
 import axios from 'axios';
 
+import bishopblack from './images/bishopblack.png';
+import bishopwhite from './images/bishopwhite.png';
+import rookblack from './images/rookblack.png';
+import rookwhite from './images/rookwhite.png';
+import queenblack from './images/queenblack.png';
+import queenwhite from './images/queenwhite.png';
+import kingblack from './images/kingblack.png';
+import kingwhite from './images/kingwhite.png';
+import pawnblack from './images/pawnblack.png';
+import pawnwhite from './images/pawnwhite.png';
+import knightblack from './images/knightblack.png';
+import knightwhite from './images/knightwhite.png';
+
+
+
+var lookup = {
+  "bishopblack": bishopblack,
+  "bishopwhite": bishopwhite,
+  "pawnblack": pawnblack,
+  "pawnwhite": pawnwhite,
+  "rookblack": rookblack, 
+  "rookwhite": rookwhite, 
+  "queenblack": queenblack,
+  "queenwhite": queenwhite,
+  "kingblack": kingblack,
+  "kingwhite": kingwhite,
+  "knightblack": knightblack,
+  "knightwhite": knightwhite,
+}
+
 var getColor = (x,y) => (x % 2) ? ((y % 2) ? 'gray' : 'lightgray') : ((y % 2) ? 'lightgray' : 'gray')
 
 var getIcon = function(type, color) {
@@ -57,7 +87,9 @@ class ChessTile extends React.Component {
               onMouseOut={(e) => selected || reachable ? null : e.currentTarget.style.opacity = 1}
             >
               {this.props.piece[0] ? <img
-                src={process.env.PUBLIC_URL + getIcon(this.props.piece[0], this.props.piece[1])} style={{
+                src={lookup[this.props.piece[0] + this.props.piece[1]]}
+                //src={process.env.PUBLIC_URL + getIcon(this.props.piece[0], this.props.piece[1])} 
+                style={{
                 width: "75%",
                 height: "75%",
                 cursor: "pointer"
@@ -418,8 +450,8 @@ class App extends React.Component {
           }, () => {
             this.setState({
               allPossibleMoves: this.getAllPossibleMoves(this.state, true) 
-            }, () => axios.post(`https://polar-badlands-38570.herokuapp.com/getMove`, { 'board': getBoardRepresentation(this.state.board)})
-            //}, () => axios.post(`http://localhost:8000/getMove`, { 'board': getBoardRepresentation(this.state.board)})
+            // }, () => axios.post(`https://polar-badlands-38570.herokuapp.com/getMove`, { 'board': getBoardRepresentation(this.state.board)})
+            }, () => axios.post(`http://localhost:5000/getMove`, { 'board': getBoardRepresentation(this.state.board)})
             .then(res => {
               var fromX = parseInt(res.data['nextMove'][0]);
               var fromY = parseInt(res.data['nextMove'][2]);
