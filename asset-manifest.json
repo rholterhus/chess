@@ -1,23 +1,25 @@
 {
   "files": {
-    "main.css": "/chessFrontend/static/css/main.c39ecf4b.chunk.css",
-    "main.js": "/chessFrontend/static/js/main.b92b7336.chunk.js",
-    "main.js.map": "/chessFrontend/static/js/main.b92b7336.chunk.js.map",
-    "runtime-main.js": "/chessFrontend/static/js/runtime-main.5add24a0.js",
-    "runtime-main.js.map": "/chessFrontend/static/js/runtime-main.5add24a0.js.map",
-    "static/js/2.215a00b3.chunk.js": "/chessFrontend/static/js/2.215a00b3.chunk.js",
-    "static/js/2.215a00b3.chunk.js.map": "/chessFrontend/static/js/2.215a00b3.chunk.js.map",
-    "static/js/3.318ab132.chunk.js": "/chessFrontend/static/js/3.318ab132.chunk.js",
-    "static/js/3.318ab132.chunk.js.map": "/chessFrontend/static/js/3.318ab132.chunk.js.map",
+    "main.css": "/chessFrontend/static/css/main.1638b442.chunk.css",
+    "main.js": "/chessFrontend/static/js/main.bdbf047b.chunk.js",
+    "main.js.map": "/chessFrontend/static/js/main.bdbf047b.chunk.js.map",
+    "runtime-main.js": "/chessFrontend/static/js/runtime-main.60c5deab.js",
+    "runtime-main.js.map": "/chessFrontend/static/js/runtime-main.60c5deab.js.map",
+    "static/js/2.ba289361.chunk.js": "/chessFrontend/static/js/2.ba289361.chunk.js",
+    "static/js/2.ba289361.chunk.js.map": "/chessFrontend/static/js/2.ba289361.chunk.js.map",
+    "static/js/3.8f01e197.chunk.js": "/chessFrontend/static/js/3.8f01e197.chunk.js",
+    "static/js/3.8f01e197.chunk.js.map": "/chessFrontend/static/js/3.8f01e197.chunk.js.map",
     "index.html": "/chessFrontend/index.html",
-    "static/css/main.c39ecf4b.chunk.css.map": "/chessFrontend/static/css/main.c39ecf4b.chunk.css.map",
-    "static/js/2.215a00b3.chunk.js.LICENSE.txt": "/chessFrontend/static/js/2.215a00b3.chunk.js.LICENSE.txt",
-    "static/media/logo.6ce24c58.svg": "/chessFrontend/static/media/logo.6ce24c58.svg"
+    "static/css/main.1638b442.chunk.css.map": "/chessFrontend/static/css/main.1638b442.chunk.css.map",
+    "static/js/2.ba289361.chunk.js.LICENSE.txt": "/chessFrontend/static/js/2.ba289361.chunk.js.LICENSE.txt",
+    "static/media/MainPage.css": "/chessFrontend/static/media/background.5fba368d.jpg",
+    "static/media/pieceMove.651ad549.mp3": "/chessFrontend/static/media/pieceMove.651ad549.mp3",
+    "static/media/pieceTake.2b304e3e.mp3": "/chessFrontend/static/media/pieceTake.2b304e3e.mp3"
   },
   "entrypoints": [
-    "static/js/runtime-main.5add24a0.js",
-    "static/js/2.215a00b3.chunk.js",
-    "static/css/main.c39ecf4b.chunk.css",
-    "static/js/main.b92b7336.chunk.js"
+    "static/js/runtime-main.60c5deab.js",
+    "static/js/2.ba289361.chunk.js",
+    "static/css/main.1638b442.chunk.css",
+    "static/js/main.bdbf047b.chunk.js"
   ]
 }
