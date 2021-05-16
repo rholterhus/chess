@@ -35,7 +35,7 @@ var lookup = {
   "knightwhite": knightwhite,
 }
 
-var getColor = (x,y) => (x % 2) ? ((y % 2) ? 'gray' : 'lightgray') : ((y % 2) ? 'lightgray' : 'gray')
+var getColor = (x,y) => (x % 2) ? ((y % 2) ? 'burlywood' : 'saddlebrown') : ((y % 2) ? 'saddlebrown' : 'burlywood')
 
 var getIcon = function(type, color) {
   return type + color + '.png';
@@ -71,8 +71,9 @@ class ChessTile extends React.Component {
     var color = getColor(this.props.x, this.props.y);
     var selected = arraysEqual([this.props.x, this.props.y], this.props.selected)
     var reachable = this.props.reachable
-
+    
     return <div
+            draggable="true"
             style={{
               float: "left",
               height: "12.5%",

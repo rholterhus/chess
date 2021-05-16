@@ -1,0 +1,74 @@
+.background {
+    background-color: white;
+    height: 100%;
+    text-align: center;
+}
+
+.centerBubble {
+    background: rgba(255, 255, 255, 0.5);
+    display: inline-block;
+    position: relative;
+    top: 20%;
+    width: max(200px, 35%);
+    height: max(125px, 25%);
+    border-radius: 20px;
+}
+
+.title {
+    color: white;
+    font-size: max(4vh, 4vw);
+    padding-top: 5vh;
+}
+
+.dialogContainer {
+    height: 50%;
+    position: relative;
+    font-weight: 600;
+    padding-left: 5%;
+    padding-right: 5%;
+}
+
+.dialog {
+    position: relative;
+    top: 25%;
+    height: 50%;
+}
+
+.selection {
+    height: 50%;
+    position: relative;
+}
+
+.kingBlack, .kingWhite {
+    position: absolute;
+    bottom: 20%;
+    transition: all .2s ease-in-out;
+}
+
+.kingWhite:hover, .kingBlack:hover {
+    transform: scale(1.5);
+}
+
+.kingWhite {
+    left: 15%;
+}
+
+.kingBlack {
+    right: 15%;
+}
+
+.footerContainer {
+    color: white;
+    width: 100%;
+    height: 10%;
+    position: absolute;
+    bottom: 0;
+}
+
+.footer {
+    color: white;
+    text-decoration: underline;
+    position: relative;
+    top: 25%;
+    height: 50%;
+}

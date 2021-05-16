@@ -2,7 +2,7 @@
   "name": "chesswebsite",
   "version": "0.1.0",
   "private": true,
-  "homepage": "http://gitname.github.io/chessFrontend",
+  "homepage": "http://rholterhus.github.io/chessFrontend",
   "dependencies": {
     "@kennethormandy/react-fittext": "^0.6.0",
     "@testing-library/jest-dom": "^5.11.9",
@@ -13,6 +13,7 @@
     "node-addon-api": "^1.0.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
+    "react-drag-drop-container": "^6.1.1",
     "react-router-dom": "^5.2.0",
     "react-scripts": "4.0.2",
     "use-sound": "^3.0.1",
