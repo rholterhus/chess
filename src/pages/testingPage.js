@@ -19,10 +19,11 @@ import takeSound from '../sounds/pieceTake.mp3';
 
 import { DragDropContainer, DropTarget } from 'react-drag-drop-container';
 
+const lightBrown = (opacity) => 'rgb(222,184,135,' + opacity + ")"
+const darkBrown = (opacity) => 'rgb(139,69,19,' + opacity + ")"
 
-var getColor = (x,y) => (x % 2) ? ((y % 2) ? 'burlywood' : 'saddlebrown') : ((y % 2) ? 'saddlebrown' : 'burlywood')
 
-const makeMoveSound = new Audio(moveSound);
+var getColor = (x,y,opacity=1) => (x % 2) ? ((y % 2) ? lightBrown(opacity) : darkBrown(opacity)) : ((y % 2) ? darkBrown(opacity) : lightBrown(opacity))
 
 
 const initialBoard = () => {
@@ -74,12 +75,24 @@ const isStartingTile = (tile, e) => {
 
 const ChessTile = memo((props) => {
 
+    const [curHovering, setCurHovering] = useState(false);
+    const [selected, setSelected] = useState(false);
+    const [offset, setOffset] = useState([0,0]);
+    const isActive = selected || curHovering;
+
+
     const dropped = (e) => {
         var tile = getTileFromEvent(e);
         if(tile && !isStartingTile(tile, e)) {
             tile.style.opacity = 1;
-            makeMoveSound.play();
-            console.log('dropped this data: ', e.dragData);
+            const droppedRow = tile.id[0];
+            const droppedCol = tile.id[2];
+            const startRow = e.dragData.row;
+            const startCol = e.dragData.col;
+            var board = props.board;
+            board[[startRow,startCol]] = kingwhite;
+            board[[droppedRow,droppedCol]] = kingwhite;
+            props.setBoard(board);
         }
     }
 
@@ -87,6 +100,7 @@ const ChessTile = memo((props) => {
         var tile = getTileFromEvent(e);
         if(tile && !isStartingTile(tile, e)) {
             tile.style.opacity = 0.75;
+            
         }
         
     }
@@ -98,35 +112,53 @@ const ChessTile = memo((props) => {
         }
     }
 
-    const onDragStart = ({row, col}) => {
-        var tile = document.getElementById(row + "-" + col);
-        tile.style.backgroundColor = "gray";
+    const onMouseUp = (e) => {
+        var rect = e.target.parentNode.parentNode.parentNode.getBoundingClientRect();
+        var inOriginalBox = 
+                e.clientX >= rect.x && 
+                e.clientX <= rect.x + rect.width && 
+                e.clientY >= rect.y && 
+                e.clientY <= rect.y + rect.height;
+        if(inOriginalBox) setSelected(!selected);
+        setCurHovering(false);
+        setOffset([0,0]);
     }
 
-    const onDragEnd = ({row, col}) => {
-        var tile = document.getElementById(row + "-" + col);
-        tile.style.backgroundColor = getColor(row, col);
+    const onMouseDown = (e) => {
+        var rect = e.target.getBoundingClientRect();
+        var x = e.clientX - rect.x - rect.width / 2;
+        var y = e.clientY- rect.y - rect.height / 2;
+        setOffset([x,y]);
+        setCurHovering(true);
     }
-
     
-
     var piece = null;
-    if(props.piece) piece = <img className="piece" draggable="false" src={props.piece}/>
+    if(props.piece) piece = <img 
+                            style={{marginLeft: offset[0], marginTop: offset[1]}} 
+                            onMouseDown={onMouseDown} 
+                            onMouseUp={onMouseUp}
+                            className="piece"
+                            draggable="false" 
+                            src={props.piece}
+                            />
 
     return (
         <DropTarget
         targetKey="foo" 
-        dropData={"endData"}
         onHit={dropped}
         onDragEnter={onDragEnter}
         onDragLeave={onDragLeave}
         >
-            <div className="chessTile" id={props.row + "-" + props.col} style={{backgroundColor: getColor(props.row, props.col)}}> 
+            <div 
+            className="chessTile" 
+            id={props.row + "-" + props.col} 
+            style={{
+                backgroundColor: getColor(props.row, props.col, isActive ? 0.75 : 1)
+            }}
+            >
                 <DragDropContainer 
                 targetKey="foo" 
                 dragData={{row: props.row, col: props.col}}
-                onDragStart={onDragStart} 
-                onDragEnd={onDragEnd} 
                 >
                     {piece}
                 </DragDropContainer>
@@ -141,6 +173,7 @@ const eight = [0,1,2,3,4,5,6,7]
 const Board = (props) => {
 
     const [board, setBoard] = useState(() => initialBoard());
+    console.log("rendering board");
 
 
     return (
@@ -150,6 +183,8 @@ const Board = (props) => {
                     row={row} 
                     col={col}
                     piece={board[[row,col]]}
+                    setBoard={setBoard}
+                    board={board}
                     />
                 )
             )
