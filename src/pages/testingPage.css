@@ -25,6 +25,17 @@
     align-items: center;
 }
 
+.tileCircle {
+    width: 33%;
+    height: 33%;
+    float: left;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    background-color: rgb(0, 128, 0, 0);
+    border-radius: 50%;
+}
+
 .piece {
     cursor: pointer;
     position: absolute;
