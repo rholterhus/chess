@@ -15,7 +15,7 @@ const green = (opacity) => "rgb(0, 128, 0," + opacity + ")"
 const white = (opacity) => "rgb(0, 0, 0," + opacity + ")"
 const eight = [0,1,2,3,4,5,6,7]
 
-var getColor = (x,y,opacity=1) => (x % 2) ? ((y % 2) ? lightBrown(opacity) : darkBrown(opacity)) : ((y % 2) ? darkBrown(opacity) : lightBrown(opacity))
+const getColor = (x,y,opacity=1) => (x % 2) ? ((y % 2) ? lightBrown(opacity) : darkBrown(opacity)) : ((y % 2) ? darkBrown(opacity) : lightBrown(opacity))
 
 const getTileFromEvent = (e) => {
     if(e.target.className == "chessTile") {
@@ -36,9 +36,10 @@ const ChessTile = (props) => {
     // const [curHoveredOver, setCurHoveredOver] = useState(false);
     const [curBeingHovered, setCurBeingHovered] = useState([false, false]); // is being hovered, was selected before hover
     const [offset, setOffset] = useState([0,0]);
-    const isActive = props.selected || curBeingHovered[0];
+    const isActive = curBeingHovered[0] || props.selected;
+    // const isSelected = props.selected;
 
-    console.log(props.selected);
+    // console.log(props.selected);
 
     const onDragEnter = (e) => {
         var tile = getTileFromEvent(e);
@@ -71,9 +72,6 @@ const ChessTile = (props) => {
             props.setSelectedSquare(null);
         }
         setOffset([0,0]);
-        // const r = props.row - 1;
-        // const c = props.col;
-        // document.getElementById("circle-" + r + "-" + c).style.backgroundColor = white(0);
     }
 
     const onMouseDown = (e) => {
@@ -83,16 +81,13 @@ const ChessTile = (props) => {
         setOffset([x,y]);
         setCurBeingHovered([true, props.selected]);
         props.setSelectedSquare(props.row + "-" + props.col);
-        // const r = props.row - 1;
-        // const c = props.col;
-        // document.getElementById("circle-" + r + "-" + c).style.backgroundColor = white(0.25);
     }
 
     var piece = null;
     if(props.piece) piece = <img 
                             style={{marginLeft: offset[0], marginTop: offset[1]}} 
-                            onMouseDown={onMouseDown} 
-                            onMouseUp={onMouseUp}
+                            onPointerDown={onMouseDown} 
+                            onPointerUp={onMouseUp}
                             className="piece"
                             draggable="false" 
                             src={props.piece}
@@ -108,33 +103,24 @@ const ChessTile = (props) => {
             droppedPieceSetSquareState(null);
         }
     }
+
+    const dragData = {
+        row: props.row, 
+        col: props.col, 
+        droppedPiece: props.piece,
+        droppedPieceSetSquareState: props.setSquareState,
+    };
+
+    const tileStyle = {
+        backgroundColor: getColor(props.row, props.col, isActive ? 0.75 : 1)
+    };
     
 
     return (
-        <DropTarget
-        targetKey="foo" 
-        onHit={dropped}
-        onDragEnter={onDragEnter}
-        onDragLeave={onDragLeave}
-        >
-            <div 
-            className="chessTile" 
-            id={props.row + "-" + props.col} 
-            style={{
-                backgroundColor: getColor(props.row, props.col, isActive ? 0.75 : 1)
-            }}
-            >
+        <DropTarget targetKey="foo" onHit={dropped} onDragEnter={onDragEnter} onDragLeave={onDragLeave}>
+            <div className="chessTile" id={props.row + "-" + props.col} style={tileStyle}>
                 <div className="tileCircle" id={"circle-" + props.row + "-" + props.col}>
-                    <DragDropContainer 
-                    targetKey="foo" 
-                    dragData={{
-                        row: props.row, 
-                        col: props.col, 
-                        droppedPiece: props.piece,
-                        droppedPieceSetSquareState: props.setSquareState,
-                    
-                    }}
-                    >
+                    <DragDropContainer targetKey="foo" dragData={dragData}>
                         {piece}
                     </DragDropContainer>
                 </div>
@@ -146,11 +132,32 @@ const ChessTile = (props) => {
 
 const MemoizedChessTile = memo(ChessTile);
 
+const getAllPossibleMoves = (board, selectedSquare) => {
+    if(selectedSquare && selectedSquare[0] == "6") {
+        return [[4, selectedSquare[2]], [5, selectedSquare[2]]];
+    } else return [];
+}
+
+const getColor2 = (x, y) => (x % 2) ? ((y % 2) ? "rgba(166,170,101,255)" : "rgba(104,84,14,255)") : ((y % 2) ? "rgba(104,84,14,255)" : "rgba(166,170,101,255)")
+
 const Board = (props) => {
 
     const board = useBoard();
     const [selectedSquare, setSelectedSquare] = useState(null);
-    console.log(selectedSquare);
+
+    // set visibility of certain moves based on selectedSquare and board
+    useEffect(() => {
+        const allPossibleMoves = getAllPossibleMoves(board, selectedSquare);
+            const allPossibleCircles = allPossibleMoves.map(coord => 
+                [document.getElementById("circle-" + coord[0] + "-" + coord[1]), coord[0], coord[1]]);
+            allPossibleCircles.map(el => el[0].style.backgroundColor = getColor2(el[1], el[2]));
+        return () => {
+            const allPossibleMoves = getAllPossibleMoves(board, selectedSquare);
+            const allPossibleCircles = allPossibleMoves.map(coord => 
+                [document.getElementById("circle-" + coord[0] + "-" + coord[1]), coord[0], coord[1]]);
+            allPossibleCircles.map(el => el[0].style.backgroundColor = null);
+        }
+    }, [selectedSquare])
 
     return (
             eight.map(row => 

@@ -26,8 +26,8 @@
 }
 
 .tileCircle {
-    width: 33%;
-    height: 33%;
+    width: 27.5%;
+    height: 27.5%;
     float: left;
     display: flex;
     justify-content: center;
