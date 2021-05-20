@@ -16,6 +16,8 @@ const white = (opacity) => "rgb(0, 0, 0," + opacity + ")"
 const eight = [0,1,2,3,4,5,6,7]
 
 const getColor = (x,y,opacity=1) => (x % 2) ? ((y % 2) ? lightBrown(opacity) : darkBrown(opacity)) : ((y % 2) ? darkBrown(opacity) : lightBrown(opacity))
+const getColor2 = (x, y) => (x % 2) ? ((y % 2) ? "rgba(166,170,101,255)" : "rgba(104,84,14,255)") : ((y % 2) ? "rgba(104,84,14,255)" : "rgba(166,170,101,255)")
+
 
 const getTileFromEvent = (e) => {
     if(e.target.className == "chessTile") {
@@ -33,13 +35,10 @@ const isStartingTile = (tile, e) => {
 
 const ChessTile = (props) => {
 
-    // const [curHoveredOver, setCurHoveredOver] = useState(false);
     const [curBeingHovered, setCurBeingHovered] = useState([false, false]); // is being hovered, was selected before hover
     const [offset, setOffset] = useState([0,0]);
     const isActive = curBeingHovered[0] || props.selected;
-    // const isSelected = props.selected;
-
-    // console.log(props.selected);
+    // console.log('rendering piece')
 
     const onDragEnter = (e) => {
         var tile = getTileFromEvent(e);
@@ -56,6 +55,7 @@ const ChessTile = (props) => {
     }
 
     const onMouseUp = (e) => {
+        console.log("mouse up", offset)
         var rect = e.target.parentNode.parentNode.parentNode.parentNode.getBoundingClientRect();
         var inOriginalBox = 
                 e.clientX >= rect.x && 
@@ -63,7 +63,8 @@ const ChessTile = (props) => {
                 e.clientY >= rect.y && 
                 e.clientY <= rect.y + rect.height;
         if(inOriginalBox) {
-            if(!curBeingHovered[1]) props.setSelectedSquare(props.row + "-" + props.col);
+            console.log(!curBeingHovered[1],!(offset[0] === 0 && offset[1] === 0))
+            if(!curBeingHovered[1] && !(offset[0] === 0 && offset[1] === 0)) props.setSelectedSquare(props.row + "-" + props.col);
             else props.setSelectedSquare(null);
             setCurBeingHovered([false, !curBeingHovered[1]]);
         }
@@ -72,6 +73,7 @@ const ChessTile = (props) => {
             props.setSelectedSquare(null);
         }
         setOffset([0,0]);
+        e.stopPropagation();
     }
 
     const onMouseDown = (e) => {
@@ -85,6 +87,7 @@ const ChessTile = (props) => {
 
     var piece = null;
     if(props.piece) piece = <img 
+                            id={"piece-" + props.row + "-" + props.col}
                             style={{marginLeft: offset[0], marginTop: offset[1]}} 
                             onPointerDown={onMouseDown} 
                             onPointerUp={onMouseUp}
@@ -138,7 +141,11 @@ const getAllPossibleMoves = (board, selectedSquare) => {
     } else return [];
 }
 
-const getColor2 = (x, y) => (x % 2) ? ((y % 2) ? "rgba(166,170,101,255)" : "rgba(104,84,14,255)") : ((y % 2) ? "rgba(104,84,14,255)" : "rgba(166,170,101,255)")
+const getCoordsFromEvent = (e) => {
+    if (e.target.className === "chessTile") return [e.target.id[0], e.target.id[2]];
+    if (e.target.className === "tileCircle") return [e.target.parentNode.id[0], e.target.parentNode.id[2]];
+}
+
 
 const Board = (props) => {
 
@@ -148,14 +155,33 @@ const Board = (props) => {
     // set visibility of certain moves based on selectedSquare and board
     useEffect(() => {
         const allPossibleMoves = getAllPossibleMoves(board, selectedSquare);
-            const allPossibleCircles = allPossibleMoves.map(coord => 
-                [document.getElementById("circle-" + coord[0] + "-" + coord[1]), coord[0], coord[1]]);
+            const allPossibleCircles = allPossibleMoves.map(coord => [document.getElementById("circle-" + coord[0] + "-" + coord[1]), coord[0], coord[1]]);
             allPossibleCircles.map(el => el[0].style.backgroundColor = getColor2(el[1], el[2]));
+            const allPossibleTiles = allPossibleMoves.map(coord => [document.getElementById(coord[0] + "-" + coord[1]), coord[0], coord[1]]);
+            allPossibleTiles.map(el => el[0].style.cursor = "pointer");
+            allPossibleTiles.map(el => el[0].onmouseover = () => el[0].style.backgroundColor = getColor2(el[1], el[2]));
+            allPossibleTiles.map(el => el[0].onmouseleave = () => el[0].style.backgroundColor = getColor(el[1], el[2]));
+            allPossibleTiles.map(el => el[0].onpointerdown = (e) => {
+                const [clickedRow, clickedCol] = getCoordsFromEvent(e);
+                const startRow = selectedSquare[0];
+                const startCol = selectedSquare[2];
+                const piece = board[[startRow,startCol]][0];
+                board[[startRow,startCol]][1](null);
+                board[[clickedRow,clickedCol]][1](piece);
+                setSelectedSquare(null);
+                if (e.target.className === "chessTile") e.target.style.backgroundColor = getColor(el[1], el[2]);
+                if (e.target.className === "tileCircle") e.target.parentNode.style.backgroundColor = getColor(el[1], el[2]);
+            });
         return () => {
             const allPossibleMoves = getAllPossibleMoves(board, selectedSquare);
-            const allPossibleCircles = allPossibleMoves.map(coord => 
-                [document.getElementById("circle-" + coord[0] + "-" + coord[1]), coord[0], coord[1]]);
+            const allPossibleCircles = allPossibleMoves.map(coord => [document.getElementById("circle-" + coord[0] + "-" + coord[1]), coord[0], coord[1]]);
             allPossibleCircles.map(el => el[0].style.backgroundColor = null);
+            const allPossibleTiles = allPossibleMoves.map(coord => [document.getElementById(coord[0] + "-" + coord[1]), coord[0], coord[1]]);
+            allPossibleTiles.map(el => el[0].style.cursor = null);
+            allPossibleTiles.map(el => el[0].onmouseover = null);
+            allPossibleTiles.map(el => el[0].onmouseleave = null);
+            allPossibleTiles.map(el => el[0].onpointerdown = null);
+            allPossibleTiles.map(el => el[0].onpointerup = null);
         }
     }, [selectedSquare])
 
