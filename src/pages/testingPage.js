@@ -13,6 +13,7 @@ import pawnblack from '../images/pawnblack.png';
 import pawnwhite from '../images/pawnwhite.png';
 import knightblack from '../images/knightblack.png';
 import knightwhite from '../images/knightwhite.png';
+import {ReactComponent as Arrow} from '../images/arrow.svg';
 
 import moveSound from '../sounds/pieceMove.mp3';
 import takeSound from '../sounds/pieceTake.mp3';
@@ -30,6 +31,9 @@ const eight = [0,1,2,3,4,5,6,7]
 
 const getColor = (x,y,opacity=1) => (x % 2) ? ((y % 2) ? lightBrown(opacity) : darkBrown(opacity)) : ((y % 2) ? darkBrown(opacity) : lightBrown(opacity))
 const getColor2 = (x, y) => (x % 2) ? ((y % 2) ? "rgba(166,170,101,255)" : "rgba(104,84,14,255)") : ((y % 2) ? "rgba(104,84,14,255)" : "rgba(166,170,101,255)")
+
+
+let root = document.documentElement;
 
 
 // const getTileFromEvent = (e) => {
@@ -258,16 +262,21 @@ const ChessTile = (props) => {
         else style["backgroundColor"] = color;
     }
 
+    const dragData = {
+        piece: props.piece,
+        startSquare: [props.row, props.col]
+    }
+
     const inner = <div className="chessTile" id={props.row + "-" + props.col} style={tileStyle}>
                         <div className={props.isPossibleMove && piece ? "tileCorners": "tileCircle"} id={"circle-" + props.row + "-" + props.col} style={style}>
-                            <DragDropContainer targetKey="chessTarget" dragData={props.row + "-" + props.col} noDragging={!props.isOnSideToPlay}>
+                            <DragDropContainer targetKey="chessTarget" dragData={dragData} noDragging={!props.isOnSideToPlay}>
                                 {piece}
                             </DragDropContainer>
                         </div>
                     </div>;
 
     return (
-        <DropTarget targetKey="chessTarget" onDragEnter={props.isPossibleMove ? props.handleTileHoverEnter : () => {}} onDragLeave={props.isPossibleMove ? props.handleTileHoverLeave : () => {}}>
+        <DropTarget targetKey={"chessTarget"} onHit={e => props.handleDrop(e, [props.row, props.col], props.isPossibleMove)} onDragEnter={props.isPossibleMove ? props.handleTileHoverEnter : () => {}} onDragLeave={props.isPossibleMove ? props.handleTileHoverLeave : () => {}}>
             {inner}
         </DropTarget>
     );
@@ -423,11 +432,7 @@ const Board = (props) => {
                 if(selectedSquare[3]) setSelectedSquare([null, 0, 0, false]);
                 else setSelectedSquare([selectedSquare[0], 0, 0, true]);
             } else if(isPossibleMove(selectedSquare[0], [tile.id[0], tile.id[2]], possibleMoves)) {
-                const piece = board[[selectedSquare[0][6], selectedSquare[0][8]]][0];
-                board[[selectedSquare[0][6], selectedSquare[0][8]]][1](null);
-                board[[tile.id[0], tile.id[2]]][1](piece);
-                setSelectedSquare([null, 0, 0, false]);
-                setSideToPlay(sideToPlay => !sideToPlay);
+                // let handleDrop take care of this case
             } else {
                 setSelectedSquare([null, 0, 0, false])
             }
@@ -446,6 +451,15 @@ const Board = (props) => {
         setHoveredSquare(null);
     }, [])
 
+    const handleDrop = useCallback((e, droppedTile, isPossibleMove) => {
+        if(isPossibleMove) {
+            const piece = e.dragData.piece;
+            board[e.dragData.startSquare][1](null);
+            board[droppedTile][1](piece);
+            setSelectedSquare([null, 0, 0, false]);
+            setSideToPlay(sideToPlay => !sideToPlay);
+        }
+    }, [])
 
     useEffect(() => {
         var newPossibleMoves = {};
@@ -463,29 +477,49 @@ const Board = (props) => {
         }
         setPossibleMoves(newPossibleMoves);
         setIsInCheck(isInCheck);
+        sideToPlay ? root.style.setProperty('--arrowColor', "black") : root.style.setProperty('--arrowColor', "white");
     }, [sideToPlay]);
 
     return (
-        <div className="board">
-            {eight.map(row => 
-                eight.map(col => 
-                    <MemoizedChessTile
-                    key={row + col}
-                    row={row} 
-                    col={col}
-                    piece={board[[row,col]][0]}
-                    isInCheck={pieceIsInCheck(board[[row,col]][0], sideToPlay, isInCheck)}
-                    isOnSideToPlay={getSide(board[[row,col]][0]) === sideToPlay}
-                    selected={selectedSquare[0] === "piece-" + row + "-" + col ? selectedSquare : null}
-                    hovered={hoveredSquare === row + "-" + col}
-                    handleTileClick={handleTileClick}
-                    handleTileUnClick={handleTileUnClick}
-                    handleTileHoverEnter={handleTileHoverEnter}
-                    handleTileHoverLeave={handleTileHoverLeave}
-                    isPossibleMove={isPossibleMove(selectedSquare[0], [row, col], possibleMoves)}
-                    />
-                )
-            )}
+        <div className="boardContainer">
+            <div className="board">
+                {eight.map(row => 
+                    eight.map(col => 
+                        <MemoizedChessTile
+                        key={row + col}
+                        row={row} 
+                        col={col}
+                        piece={board[[row,col]][0]}
+                        isInCheck={pieceIsInCheck(board[[row,col]][0], sideToPlay, isInCheck)}
+                        isOnSideToPlay={getSide(board[[row,col]][0]) === sideToPlay}
+                        selected={selectedSquare[0] === "piece-" + row + "-" + col ? selectedSquare : null}
+                        hovered={hoveredSquare === row + "-" + col}
+                        handleTileClick={handleTileClick}
+                        handleTileUnClick={handleTileUnClick}
+                        handleDrop={handleDrop}
+                        handleTileHoverEnter={handleTileHoverEnter}
+                        handleTileHoverLeave={handleTileHoverLeave}
+                        isPossibleMove={isPossibleMove(selectedSquare[0], [row, col], possibleMoves)}
+                        />
+                    )
+                )}
+            </div>
+            <div className="boardButtonContainer">
+                <div className="boardButton" 
+                style={{backgroundColor: sideToPlay ? "white" : "black"}}
+                onMouseEnter={e => e.target.style.backgroundColor = "gray"}
+                onMouseLeave={e => e.target.style.backgroundColor = sideToPlay ? "white" : "black"}
+                >
+                    <i className="arrow left"></i>
+                </div>
+                <div className="boardButton" 
+                style={{backgroundColor: sideToPlay ? "white" : "black"}}
+                onMouseEnter={e => e.target.style.backgroundColor = "gray"}
+                onMouseLeave={e => e.target.style.backgroundColor = sideToPlay ? "white" : "black"}
+                >
+                    <i className="arrow right"></i>
+                </div>
+            </div>
         </div>
     );
 }
