@@ -1,5 +1,18 @@
-import React, { useState, useEffect, memo, useRef, useCallback }from 'react';
+import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
 import './testingPage.css';
+
+import bishopblack from '../images/bishopblack.png';
+import bishopwhite from '../images/bishopwhite.png';
+import rookblack from '../images/rookblack.png';
+import rookwhite from '../images/rookwhite.png';
+import queenblack from '../images/queenblack.png';
+import queenwhite from '../images/queenwhite.png';
+import kingblack from '../images/kingblack.png';
+import kingwhite from '../images/kingwhite.png';
+import pawnblack from '../images/pawnblack.png';
+import pawnwhite from '../images/pawnwhite.png';
+import knightblack from '../images/knightblack.png';
+import knightwhite from '../images/knightwhite.png';
 
 import moveSound from '../sounds/pieceMove.mp3';
 import takeSound from '../sounds/pieceTake.mp3';
@@ -220,30 +233,42 @@ const ChessTile = (props) => {
     const pieceOffset = props.selected ? {marginLeft: props.selected[1], marginTop: props.selected[2]} : null;
     if(props.piece) piece = <img 
                             id={"piece-" + props.row + "-" + props.col}
-                            className={props.selected ? "selectedPiece" : "piece"}
+                            className={props.selected ? "selectedPiece" : props.isOnSideToPlay ? "selectablePiece" : "selectablePiece"}
                             draggable="false" 
                             src={props.piece}
                             style={pieceOffset} 
-                            onPointerDown={props.handleTileClick}
-                            onPointerUp={props.handleTileUnClick}
+                            onPointerDown={props.isOnSideToPlay ? props.handleTileClick : null}
+                            onPointerUp={props.isOnSideToPlay ? props.handleTileUnClick : null}
                             />
 
     const isActive = props.selected || props.hovered;
-    // console.log('rerendering tile')
+    const isPossibleMove = props.isPossibleMove;
 
     const tileStyle = {
-        backgroundColor: isActive ? "green" : getColor(props.row, props.col)
+        backgroundColor: props.isInCheck ? "red" : isActive ? getColor2(props.row, props.col) : getColor(props.row, props.col)
     };
 
+    const style = {}
+    const color = getColor2(props.row, props.col);
+    if(isPossibleMove) {
+        if(piece) style["background"] = `linear-gradient(to bottom left,  ${color} 12.5%, transparent 12.5%),\
+        linear-gradient(to bottom right,  ${color} 12.5%, transparent 12.5%),\
+        linear-gradient(to top left,  ${color} 12.5%, transparent 12.5%),\
+        linear-gradient(to top right, ${color} 12.5%, transparent 12.5%)`;
+        else style["backgroundColor"] = color;
+    }
+
+    const inner = <div className="chessTile" id={props.row + "-" + props.col} style={tileStyle}>
+                        <div className={props.isPossibleMove && piece ? "tileCorners": "tileCircle"} id={"circle-" + props.row + "-" + props.col} style={style}>
+                            <DragDropContainer targetKey="chessTarget" dragData={props.row + "-" + props.col} noDragging={!props.isOnSideToPlay}>
+                                {piece}
+                            </DragDropContainer>
+                        </div>
+                    </div>;
+
     return (
-        <DropTarget targetKey="chessTarget" onDragEnter={props.handleTileHoverEnter} onDragLeave={props.handleTileHoverLeave}>
-            <div className="chessTile" id={props.row + "-" + props.col} style={tileStyle}>
-                <div className="tileCircle" id={"circle-" + props.row + "-" + props.col}>
-                    <DragDropContainer targetKey="chessTarget" dragData={props.row + "-" + props.col}>
-                        {piece}
-                    </DragDropContainer>
-                </div>
-            </div>
+        <DropTarget targetKey="chessTarget" onDragEnter={props.isPossibleMove ? props.handleTileHoverEnter : () => {}} onDragLeave={props.isPossibleMove ? props.handleTileHoverLeave : () => {}}>
+            {inner}
         </DropTarget>
     );
 }
@@ -255,11 +280,19 @@ const MemoizedChessTile = memo(ChessTile);
 const getTileFromEvent = (e) => {
     if(e.target.className == "chessTile") {
         return e.target;
-    } else if (e.target.className == "piece"|| e.target.className == "selectedPiece") {
-        return e.target.parentNode.parentNode.parentNode.parentNode;
+    } else if (e.target.className == "selectablePiece" || e.target.className == "selectedPiece" || e.target.className == "nonSelectablePiece") {
+        return e.target.parentNode.parentNode;
     } else if (e.target.className == "tileCircle") {
         return e.target.parentNode;
+    } else if (e.target.className == "ddcontainer") {
+        return e.target.parentNode.parentNode;
     } else return null;
+}
+
+const getTileFromCoordinates = (x, y) => {
+    const list = document.elementsFromPoint(x, y);
+    for(let i = 0; i < list.length; ++i) if(list[i].className === "chessTile") return list[i];
+    return null;
 }
 
 const getStartingTile = () => {
@@ -267,60 +300,193 @@ const getStartingTile = () => {
     return selectedPieces[0].parentNode.parentNode.parentNode.parentNode;
 }
 
+const withinBoard = (x, y) => 0 <= x && x <= 7 && 0 <= y && y <= 7;
+
+const isOccupied = (board, x, y) => withinBoard(x, y) && board[[x,y]][0];
+
+const isOccupiedByBlack = (board, x, y) => withinBoard(x, y) && isOccupied(board, x, y) && !getSide(board[[x,y]][0]);
+
+const isOccupiedByWhite = (board, x, y) => withinBoard(x, y) && isOccupied(board, x, y) && getSide(board[[x,y]][0]);
+
+
+const getAllPossibleMoves = (board, selectedSquare) => {
+    var x = parseInt(selectedSquare[0]);
+    var y = parseInt(selectedSquare[2]);
+    var selectedPiece = board[[x,y]][0];
+    const side = getSide(selectedPiece);
+    let ans = []
+    
+    if(selectedPiece == pawnwhite) {
+        if(!isOccupied(board, x-1, y)) {
+            ans.push([x-1,y]);
+            if(x == "6" && !isOccupied(board, x-2, y)) ans.push([x-2,y]);
+        }
+        if(isOccupiedByBlack(board, x-1, y-1)) ans.push([x-1,y-1]);
+        if(isOccupiedByBlack(board, x-1, y+1)) ans.push([x-1,y+1]);
+    }
+
+    if(selectedPiece == pawnblack) {
+        if(!isOccupied(board, x+1, y)) {
+            ans.push([x+1,y]);
+            if(x == "1" && !isOccupied(board, x+2, y)) ans.push([x+2,y]);
+        }
+        if(isOccupiedByWhite(board, x+1, y-1)) ans.push([x+1,y-1]);
+        if(isOccupiedByWhite(board, x+1, y+1)) ans.push([x+1,y+1]);
+    }
+
+    if(selectedPiece == knightwhite || selectedPiece == knightblack) {
+        const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
+        const possibleMoves = [[1,2], [1,-2], [-1,2], [-1,-2], [2,1], [-2,1], [2,-1], [-2,-1]]
+        for(let i = 0; i < possibleMoves.length; ++i) {
+            const [diffx, diffy] = possibleMoves[i];
+            if(checkOccupied(board, diffx + x, diffy + y)) ans.push([diffx+x,diffy+y]) 
+        }
+    }
+
+    if(selectedPiece == bishopwhite || selectedPiece == bishopblack || selectedPiece == queenwhite || selectedPiece == queenblack) {        
+        const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
+        const otherSideOccupied = side ? isOccupiedByBlack : isOccupiedByWhite;
+        const possibleMoves = [[1,1], [-1, 1], [1,-1], [-1,-1]];
+        for(let i = 0; i < possibleMoves.length; ++i) {
+            const [diffx, diffy] = possibleMoves[i];
+            let m = 1;
+            while(checkOccupied(board, m * diffx + x, m * diffy + y)) {
+                ans.push([m*diffx+x,m*diffy+y]);
+                if(otherSideOccupied(board, m * diffx + x, m * diffy + y)) break;
+                m += 1;
+            }
+        }
+    }
+
+    if(selectedPiece == rookwhite || selectedPiece == rookblack || selectedPiece == queenwhite || selectedPiece == queenblack) {        
+        const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
+        const otherSideOccupied = side ? isOccupiedByBlack : isOccupiedByWhite;
+        const possibleMoves = [[0,1], [0,-1], [1,0], [-1,0]];
+        for(let i = 0; i < possibleMoves.length; ++i) {
+            const [diffx, diffy] = possibleMoves[i];
+            let m = 1;
+            while(checkOccupied(board, m * diffx + x, m * diffy + y)) {
+                ans.push([m*diffx+x,m*diffy+y]);
+                if(otherSideOccupied(board, m * diffx + x, m * diffy + y)) break;
+                m += 1;
+            }
+        }
+    }
+
+
+
+    return ans;
+}
+
+const getCoordsFromEvent = (e) => {
+    if (e.target.className === "chessTile") return [e.target.id[0], e.target.id[2]];
+    if (e.target.className === "tileCircle") return [e.target.parentNode.id[0], e.target.parentNode.id[2]];
+}
+
+const getSide = (piece) => {
+    return piece == kingwhite ||
+        piece == queenwhite ||
+        piece == bishopwhite ||
+        piece == knightwhite ||
+        piece == rookwhite ||
+        piece == pawnwhite;
+}
+
+const isPossibleMove = (selectedSquare, currentSquare, possibleMoves) => {
+    if(possibleMoves && selectedSquare) return possibleMoves[selectedSquare].some(move => move[0] == currentSquare[0] && move[1] == currentSquare[1]);
+    else return false;
+}
+
+const pieceIsInCheck = (piece, sideToPlay, isInCheck) => (piece == kingwhite || piece == kingblack) && isInCheck && getSide(piece) == sideToPlay
+
+
 const Board = (props) => {
 
     const board = useBoard();
-    const [selectedSquare, setSelectedSquare] = useState([null,0,0]);
+    const [selectedSquare, setSelectedSquare] = useState([null, 0, 0, false]); //piece, offsetX, offsetY, wasSelectedPreviously
     const [hoveredSquare, setHoveredSquare] = useState(null);
+    const [sideToPlay, setSideToPlay] = useState(true); // white is true, black is false
+    const [possibleMoves, setPossibleMoves] = useState(null);
+    const [isInCheck, setIsInCheck] = useState(null);
 
     const handleTileClick = useCallback((e) => {
         var rect = e.target.getBoundingClientRect();
         var x = e.clientX - rect.x - rect.width / 2;
-        var y = e.clientY- rect.y - rect.height / 2;
-        setSelectedSquare([e.target.id, x, y]);
-    }, [])
+        var y = e.clientY - rect.y - rect.height / 2;
+        setSelectedSquare([e.target.id, x, y, selectedSquare[0] === e.target.id]);
+    }, [selectedSquare])
 
     const handleTileUnClick = useCallback((e) => {
-        setSelectedSquare([null, 0, 0]);
+        var tile = getTileFromCoordinates(e.clientX, e.clientY);
+        if(tile) {
+            if("piece-" + tile.id == selectedSquare[0]) {
+                if(selectedSquare[3]) setSelectedSquare([null, 0, 0, false]);
+                else setSelectedSquare([selectedSquare[0], 0, 0, true]);
+            } else if(isPossibleMove(selectedSquare[0], [tile.id[0], tile.id[2]], possibleMoves)) {
+                const piece = board[[selectedSquare[0][6], selectedSquare[0][8]]][0];
+                board[[selectedSquare[0][6], selectedSquare[0][8]]][1](null);
+                board[[tile.id[0], tile.id[2]]][1](piece);
+                setSelectedSquare([null, 0, 0, false]);
+                setSideToPlay(sideToPlay => !sideToPlay);
+            } else {
+                setSelectedSquare([null, 0, 0, false])
+            }
+        } else {
+            setSelectedSquare([null, 0, 0, false]);
+        }
         setHoveredSquare(null);
-    }, [])
+    }, [selectedSquare, possibleMoves])
 
     const handleTileHoverEnter = useCallback((e) => {
-        setHoveredSquare(e.target.id);
-        // var tile = getTileFromEvent(e);
-        // var startingTile = getStartingTile();
-        // if(tile && tile != startingTile) {
-        //     tile.style.backgroundColor = "green";
-        // }
+        const tile = getTileFromEvent(e);
+        setHoveredSquare(tile.id);
     }, [])
 
     const handleTileHoverLeave = useCallback((e) => {
         setHoveredSquare(null);
-        // var tile = getTileFromEvent(e);
-        // var startingTile = getStartingTile();
-        // if(tile && tile != startingTile) {
-        //     tile.style.backgroundColor = getColor(tile.id[0], tile.id[2]);
-        // }
     }, [])
-    
+
+
+    useEffect(() => {
+        var newPossibleMoves = {};
+        var isInCheck = false;
+        for(let i = 0; i <= 7; ++i) {
+            for(let j = 0; j <=7; ++j) {
+                newPossibleMoves["piece-" + i + "-" + j] = getAllPossibleMoves(board, i + "-" + j);
+                for(let k = 0; k < newPossibleMoves["piece-" + i + "-" + j].length; k++) {
+                    const [x, y] = newPossibleMoves["piece-" + i + "-" + j][k];
+                    if((board[[x,y]][0] == kingwhite || board[[x,y]][0] == kingblack) && getSide(board[[x,y]][0]) == sideToPlay) {
+                        isInCheck = true;
+                    }
+                }
+            }
+        }
+        setPossibleMoves(newPossibleMoves);
+        setIsInCheck(isInCheck);
+    }, [sideToPlay]);
 
     return (
-            eight.map(row => 
+        <div className="board">
+            {eight.map(row => 
                 eight.map(col => 
                     <MemoizedChessTile
                     key={row + col}
                     row={row} 
                     col={col}
                     piece={board[[row,col]][0]}
+                    isInCheck={pieceIsInCheck(board[[row,col]][0], sideToPlay, isInCheck)}
+                    isOnSideToPlay={getSide(board[[row,col]][0]) === sideToPlay}
                     selected={selectedSquare[0] === "piece-" + row + "-" + col ? selectedSquare : null}
                     hovered={hoveredSquare === row + "-" + col}
                     handleTileClick={handleTileClick}
                     handleTileUnClick={handleTileUnClick}
                     handleTileHoverEnter={handleTileHoverEnter}
                     handleTileHoverLeave={handleTileHoverLeave}
+                    isPossibleMove={isPossibleMove(selectedSquare[0], [row, col], possibleMoves)}
                     />
                 )
-            )
+            )}
+        </div>
     );
 }
 
@@ -331,9 +497,7 @@ function TestPage(props) {
 
     return (
         <div className="mainContainer" id="container">
-            <div className="board">
-                <Board/>
-            </div>
+            <Board/>
         </div>
     );
 }
