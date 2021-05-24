@@ -1,17 +1,17 @@
 {
   "files": {
     "main.css": "/chessFrontend/static/css/main.55bf469d.chunk.css",
-    "main.js": "/chessFrontend/static/js/main.df794d54.chunk.js",
-    "main.js.map": "/chessFrontend/static/js/main.df794d54.chunk.js.map",
-    "runtime-main.js": "/chessFrontend/static/js/runtime-main.ce7f0f01.js",
-    "runtime-main.js.map": "/chessFrontend/static/js/runtime-main.ce7f0f01.js.map",
-    "static/js/2.cffefe15.chunk.js": "/chessFrontend/static/js/2.cffefe15.chunk.js",
-    "static/js/2.cffefe15.chunk.js.map": "/chessFrontend/static/js/2.cffefe15.chunk.js.map",
-    "static/js/3.0ad765e1.chunk.js": "/chessFrontend/static/js/3.0ad765e1.chunk.js",
-    "static/js/3.0ad765e1.chunk.js.map": "/chessFrontend/static/js/3.0ad765e1.chunk.js.map",
+    "main.js": "/chessFrontend/static/js/main.a2f4abfd.chunk.js",
+    "main.js.map": "/chessFrontend/static/js/main.a2f4abfd.chunk.js.map",
+    "runtime-main.js": "/chessFrontend/static/js/runtime-main.ec285ab1.js",
+    "runtime-main.js.map": "/chessFrontend/static/js/runtime-main.ec285ab1.js.map",
+    "static/js/2.da9d358c.chunk.js": "/chessFrontend/static/js/2.da9d358c.chunk.js",
+    "static/js/2.da9d358c.chunk.js.map": "/chessFrontend/static/js/2.da9d358c.chunk.js.map",
+    "static/js/3.d1a50817.chunk.js": "/chessFrontend/static/js/3.d1a50817.chunk.js",
+    "static/js/3.d1a50817.chunk.js.map": "/chessFrontend/static/js/3.d1a50817.chunk.js.map",
     "index.html": "/chessFrontend/index.html",
     "static/css/main.55bf469d.chunk.css.map": "/chessFrontend/static/css/main.55bf469d.chunk.css.map",
-    "static/js/2.cffefe15.chunk.js.LICENSE.txt": "/chessFrontend/static/js/2.cffefe15.chunk.js.LICENSE.txt",
+    "static/js/2.da9d358c.chunk.js.LICENSE.txt": "/chessFrontend/static/js/2.da9d358c.chunk.js.LICENSE.txt",
     "static/media/arrow.e078f153.svg": "/chessFrontend/static/media/arrow.e078f153.svg",
     "static/media/blackking.183b682a.svg": "/chessFrontend/static/media/blackking.183b682a.svg",
     "static/media/pieceMove.651ad549.mp3": "/chessFrontend/static/media/pieceMove.651ad549.mp3",
@@ -19,9 +19,9 @@
     "static/media/whiteking.4cb5ccf6.svg": "/chessFrontend/static/media/whiteking.4cb5ccf6.svg"
   },
   "entrypoints": [
-    "static/js/runtime-main.ce7f0f01.js",
-    "static/js/2.cffefe15.chunk.js",
+    "static/js/runtime-main.ec285ab1.js",
+    "static/js/2.da9d358c.chunk.js",
     "static/css/main.55bf469d.chunk.css",
-    "static/js/main.df794d54.chunk.js"
+    "static/js/main.a2f4abfd.chunk.js"
   ]
 }
