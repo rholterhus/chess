@@ -1,8 +1,8 @@
 {
   "files": {
-    "main.css": "/chessFrontend/static/css/main.e7949262.chunk.css",
-    "main.js": "/chessFrontend/static/js/main.e95cdcd0.chunk.js",
-    "main.js.map": "/chessFrontend/static/js/main.e95cdcd0.chunk.js.map",
+    "main.css": "/chessFrontend/static/css/main.4a06d576.chunk.css",
+    "main.js": "/chessFrontend/static/js/main.47e67f33.chunk.js",
+    "main.js.map": "/chessFrontend/static/js/main.47e67f33.chunk.js.map",
     "runtime-main.js": "/chessFrontend/static/js/runtime-main.ec285ab1.js",
     "runtime-main.js.map": "/chessFrontend/static/js/runtime-main.ec285ab1.js.map",
     "static/js/2.e9894706.chunk.js": "/chessFrontend/static/js/2.e9894706.chunk.js",
@@ -10,7 +10,7 @@
     "static/js/3.d1a50817.chunk.js": "/chessFrontend/static/js/3.d1a50817.chunk.js",
     "static/js/3.d1a50817.chunk.js.map": "/chessFrontend/static/js/3.d1a50817.chunk.js.map",
     "index.html": "/chessFrontend/index.html",
-    "static/css/main.e7949262.chunk.css.map": "/chessFrontend/static/css/main.e7949262.chunk.css.map",
+    "static/css/main.4a06d576.chunk.css.map": "/chessFrontend/static/css/main.4a06d576.chunk.css.map",
     "static/js/2.e9894706.chunk.js.LICENSE.txt": "/chessFrontend/static/js/2.e9894706.chunk.js.LICENSE.txt",
     "static/media/arrow.e078f153.svg": "/chessFrontend/static/media/arrow.e078f153.svg",
     "static/media/blackking.183b682a.svg": "/chessFrontend/static/media/blackking.183b682a.svg",
@@ -21,7 +21,7 @@
   "entrypoints": [
     "static/js/runtime-main.ec285ab1.js",
     "static/js/2.e9894706.chunk.js",
-    "static/css/main.e7949262.chunk.css",
-    "static/js/main.e95cdcd0.chunk.js"
+    "static/css/main.4a06d576.chunk.css",
+    "static/js/main.47e67f33.chunk.js"
   ]
 }
