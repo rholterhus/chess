@@ -26,7 +26,6 @@ import { DragDropContainer, DropTarget } from 'react-drag-drop-container';
 
 import axios from 'axios';
 
-
 const moveSoundVar = new Howl({
     src: [moveSound]
 });
@@ -136,7 +135,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
     let ans = []
     
     if(selectedPiece == pawnwhite) {
-        if(!isOccupied(board, x-1, y)) {
+        if(!isOccupied(board, x-1, y) && withinBoard(x-1, y)) {
             ans.push([x-1,y]);
             if(x == "6" && !isOccupied(board, x-2, y)) ans.push([x-2,y]);
         }
@@ -145,7 +144,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
     }
 
     if(selectedPiece == pawnblack) {
-        if(!isOccupied(board, x+1, y)) {
+        if(!isOccupied(board, x+1, y) && withinBoard(x+1, y)) {
             ans.push([x+1,y]);
             if(x == "1" && !isOccupied(board, x+2, y)) ans.push([x+2,y]);
         }
@@ -400,6 +399,67 @@ const noPossibleMoves = (board, possibleMoves, sideToPlay) => {
 }
 
 
+const Modal = (props) => {
+
+    const style = {
+        zIndex: props.isOpen !== null ? 1 : -1,
+        backgroundColor: props.isOpen !== null ? "rgb(0,0,0,0.5)" : "rgb(0,0,0,0)"
+    }
+
+    let butttonStyles = [];
+    for(let i = 0; i < 4; ++i) {
+        let newStyle = {};
+        if(i == 0) {
+            newStyle["top"] = 0;
+            newStyle["left"] = 0;
+        } else if (i == 1) {
+            newStyle["top"] = 0;
+            newStyle["right"] = 0;
+        } else if (i == 2) {
+            newStyle["bottom"] = 0;
+            newStyle["left"] = 0;
+        } else if (i == 3) {
+            newStyle["bottom"] = 0;
+            newStyle["right"] = 0;
+        }
+        butttonStyles.push(newStyle);
+    }
+
+    const getPiece = (num) => {
+        if(num == 0) return !props.isOpen ? queenblack : queenwhite;
+        if(num == 1) return !props.isOpen ? rookblack : rookwhite;
+        if(num == 2) return !props.isOpen ? bishopblack : bishopwhite;
+        if(num == 3) return !props.isOpen ? knightblack : knightwhite;
+    }
+
+    var modal = null;
+    if(props.isOpen !== null) {
+        modal = 
+            <div className="modal">
+                {[0,1,2,3].map(num => 
+                    <img 
+                        className="modalButton" 
+                        key={num}
+                        style={butttonStyles[num]} 
+                        src={getPiece(num)} 
+                        onPointerDown={() => props.handleModalClick(num)}>
+                    </img>
+                )
+                }
+            </div>
+    }
+
+    return (
+        <div className="modalBackground" style={style}>
+           {modal}
+        </div>
+    )
+
+}
+
+const MemoizedModal = memo(Modal);
+
+
 const Board = (props) => {
 
     const board = useBoard();
@@ -408,6 +468,7 @@ const Board = (props) => {
     const [sideToPlay, setSideToPlay] = useState(true); // white is true, black is false
     const [possibleMoves, setPossibleMoves] = useState(null);
     const [isInCheck, setIsInCheck] = useState(null);
+    const [modalIsOpen, setModalIsOpen] = useState(null);
 
     const handleTileClick = useCallback((e) => {
         var rect = e.target.getBoundingClientRect();
@@ -448,6 +509,30 @@ const Board = (props) => {
         }
     }, [board])
 
+    const handleModalClick = useCallback((num) => {
+        // simply find the pawn of interest and change it to the selected piece
+        for(let i = 0; i <= 7; ++i) {
+            if(board[[0,i]][0] == pawnwhite) {
+                const piece = [queenwhite, rookwhite, bishopwhite, knightwhite][num];
+                board[[0,i]][1](piece);
+            } else if(board[[7,i]][0] == pawnblack) {
+                const piece = [queenblack, rookblack, bishopblack, knightblack][num];
+                board[[7,i]][1](piece);
+            }
+        }
+        setModalIsOpen(null);
+    }, [board])
+
+    useEffect(() => {
+        for(let i = 0; i <= 7; ++i) {
+            if(board[[0,i]][0] == pawnwhite) {
+                setModalIsOpen(true);
+            } else if(board[[7,i]][0] == pawnblack) {
+                setModalIsOpen(false);
+            }
+        }
+    }, [sideToPlay]);
+
     useEffect(() => {
         var newPossibleMoves = {};
         var isInCheck = false;
@@ -465,10 +550,11 @@ const Board = (props) => {
         setPossibleMoves(newPossibleMoves);
         setIsInCheck(isInCheck);
         sideToPlay ? root.style.setProperty('--arrowColor', "black") : root.style.setProperty('--arrowColor', "white");
-    }, [sideToPlay]);
+    }, [sideToPlay, modalIsOpen]);
 
 
     useEffect(() => {
+        return;
         if(!sideToPlay) {
             const isDev = process.env.NODE_ENV == "development";
             const url = isDev ? "http://localhost:5000/getMove" : "https://polar-badlands-38570.herokuapp.com/getMove";
@@ -510,7 +596,8 @@ const Board = (props) => {
     
     return (
         <div className="boardContainer">
-            <div className="board">
+            <div className="board" id="boardid">
+                <MemoizedModal isOpen={modalIsOpen} handleModalClick={handleModalClick}/>
                 {eight.map(row => 
                     eight.map(col => 
                         <MemoizedChessTile
