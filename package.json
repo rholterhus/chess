@@ -10,6 +10,7 @@
     "@testing-library/user-event": "^12.6.3",
     "axios": "^0.21.1",
     "bindings": "~1.2.1",
+    "howler": "^2.2.1",
     "node-addon-api": "^1.0.0",
     "react": "^17.0.1",
     "react-dom": "^17.0.1",
@@ -20,7 +21,7 @@
     "web-vitals": "^1.1.0"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "NODE_ENV=development react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",

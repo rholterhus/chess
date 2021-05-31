@@ -96,6 +96,12 @@ function useBoard() {
     board[[7,6]] = useState(knightwhite);
     board[[7,7]] = useState(rookwhite);
 
+    board["whiteCastleQueen"] = useState(true);
+    board["whiteCastleKing"] = useState(true);
+    board["blackCastleQueen"] = useState(true);
+    board["blackCastleKing"] = useState(true);
+    
+
     return board;
   
 }

@@ -1,17 +1,17 @@
 :root {
     --boardSideLength: 85vmin;
-    --boardButtonHeight: 7.5vmin;
+    --boardButtonHeight: 0vmin; /*7.5vmin;*/
     --arrowColor: black;
   }
 
-
 .mainContainer {
-    width: 100%;
-    height: 100%;
     display: flex;
     justify-content: center;
     align-items: center;
-    position: relative;
+    height: 100vh;
+    width: 100vw;
+    position: fixed;
+    overflow: hidden;
 }
 
 .boardContainer {
@@ -19,6 +19,7 @@
     top: 4%;
     width: var(--boardSideLength);
     height: calc(var(--boardSideLength) + var(--boardButtonHeight));
+    background-color: red;
     box-shadow:
         0 2.8px 2.2px rgba(0, 0, 0, 0.034),
         0 6.7px 5.3px rgba(0, 0, 0, 0.048),
@@ -29,8 +30,8 @@
 }
 
 .board {
-    width: var(--boardSideLength);
-    height: var(--boardSideLength);
+    width: 100%;
+    height: 100%;
 }
 
 .boardButtonContainer {
@@ -45,7 +46,7 @@
 .boardButton {
     width: 50%;
     height: 100%;
-    transition: 1s;
+    transition: 1.5s;
     display: flex;
     align-items: center;
     cursor: pointer;
@@ -58,17 +59,8 @@
     padding: 4px;
     position: relative;
     left: 50%;
-    transition: 1s;
+    transition: 1.5s;
 }
-
-/* .boardButton:hover .arrow{
-    border: solid white;
-    border-width: 0 4px 4px 0;
-    display: inline-block;
-    padding: 4px;
-    position: relative;
-    left: 50%;
-} */
 
 .right {
     transform: rotate(-45deg);
@@ -81,8 +73,8 @@
 }
 
 .chessTile {
-    width: 12.5%;
-    height: 12.5%;
+    width: calc(var(--boardSideLength) / 8);
+    height: calc(var(--boardSideLength) / 8);
     float: left;
     display: flex;
     justify-content: center;

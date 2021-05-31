@@ -19,12 +19,12 @@ const MainPage = () => {
     return (
     <div className="background">
         <div className="row">
-            <Link to="/chessFrontend/play?color=white">
+            <Link to="/chessFrontend/test">
             <div className="whiteKingContainer">
                 <WhiteKing/>
             </div>
             </Link>
-            <Link to="/chessFrontend/play?color=black">
+            <Link to="/chessFrontend/test">
             <div className="blackKingContainer">
                 <BlackKing/>
             </div>
