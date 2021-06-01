@@ -24,6 +24,8 @@ import useBoard from '../utils/useBoard.js'
 
 import { DragDropContainer, DropTarget } from 'react-drag-drop-container';
 
+import querySearch from "stringquery";
+
 import axios from 'axios';
 
 const moveSoundVar = new Howl({
@@ -120,11 +122,16 @@ const getTileFromCoordinates = (x, y) => {
 
 const withinBoard = (x, y) => 0 <= x && x <= 7 && 0 <= y && y <= 7;
 
-const isOccupied = (board, x, y) => withinBoard(x, y) && board[[x,y]][0];
+const isOccupied = (board, x, y) => withinBoard(x, y) && board[[x,y]][0] !== null;
 
 const isOccupiedByBlack = (board, x, y) => withinBoard(x, y) && isOccupied(board, x, y) && !getSide(board[[x,y]][0]);
 
 const isOccupiedByWhite = (board, x, y) => withinBoard(x, y) && isOccupied(board, x, y) && getSide(board[[x,y]][0]);
+
+const squareIsAttacked = (board, side, x, y) => {
+    // call isValidMove with the defaults set so it knows to not move anything and just use the x, y given
+    return !isLegalMove(board, side, null, null, [x,y]);
+}
 
 
 const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true) => {
@@ -202,12 +209,59 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
         }
     }
 
+    // find castle moves
+    if(selectedPiece == kingwhite) {
+        if(board["whiteCastleQueen"][0] && !isOccupied(board, 7, 1) && !isOccupied(board, 7, 2) && !isOccupied(board, 7, 3)) {
+                // additionally check that no piece is attacking the [7,2], [7,3], [7,4] (checking 7,4 is equivalent to the king being in check)
+                let validCastle = true;
+                for(let i = 2; i <= 4; ++i) {
+                    if(squareIsAttacked(board, side, 7, i)) validCastle = false;
+                }
+                if(validCastle) ans.push([7,0,"specialMove"]);
+        }
+
+        if(board["whiteCastleKing"][0] && !isOccupied(board, 7, 5) && !isOccupied(board, 7, 6)) {
+            // additionally check that no piece is attacking the [7,4], [7,5], [7,6] (checking 7,4 is equivalent to the king being in check)
+            let validCastle = true;
+            for(let i = 4; i <= 6; ++i) {
+                if(squareIsAttacked(board, side, 7, i)) validCastle = false;
+            }
+            if(validCastle) ans.push([7,7,"specialMove"]);
+        }
+    }
+
+    if(selectedPiece == kingblack) {
+        if(board["blackCastleQueen"][0] && !isOccupied(board, 0, 1) && !isOccupied(board, 0, 2) && !isOccupied(board, 0, 3)) {
+                // additionally check that no piece is attacking the [0,2], [0,3], [0,4] (checking 0,4 is equivalent to the king being in check)
+                let validCastle = true;
+                for(let i = 2; i <= 4; ++i) {
+                    if(squareIsAttacked(board, side, 0, i)) validCastle = false;
+                }
+                if(validCastle) ans.push([0,0,"specialMove"]);
+        }
+
+        if(board["blackCastleKing"][0] && !isOccupied(board, 0, 5) && !isOccupied(board, 0, 6)) {
+            // additionally check that no piece is attacking the [0,4], [0,5], [0,6] (checking 0,4 is equivalent to the king being in check)
+            let validCastle = true;
+            for(let i = 4; i <= 6; ++i) {
+                if(squareIsAttacked(board, side, 0, i)) validCastle = false;
+            }
+            if(validCastle) ans.push([0,7,"specialMove"]);
+        }   
+    }
+
+            
+
+
 
 
     if(checkLegality) {
         let legalAns = []
         for(let i = 0; i < ans.length; ++i) {
-            if(isLegalMove(board, side, [selectedSquare[0], selectedSquare[2]], ans[i])) legalAns.push(ans[i]);
+            if(ans[i].length === 3) {
+                legalAns.push(ans[i]); // make moves that are already known to be legal have length 3
+            }
+            else if(isLegalMove(board, side, [selectedSquare[0], selectedSquare[2]], ans[i])) legalAns.push(ans[i]);
         }
         return legalAns;
     } else {
@@ -215,7 +269,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
     }
 }
 
-const isLegalMove = (board, side, startSquare, endSquare) => {
+const isLegalMove = (board, side, startSquare, endSquare, override=null) => {
 
     // make the move, then do a scan for possible rooks, bishops or knights that could attack the square
     let newBoard = {}
@@ -225,21 +279,28 @@ const isLegalMove = (board, side, startSquare, endSquare) => {
         }
     }
 
-    alterBoard(newBoard, startSquare, endSquare);
+    if(override === null) {
+        alterBoard(newBoard, startSquare, endSquare);
 
-    var kingSquare = null;
+        var kingSquare = null;
 
-    // find king square
-    for(let i = 0; i <= 7; ++i) {
-        for(let j = 0; j <= 7; ++j) {
-            if((newBoard[[i,j]] == kingwhite || newBoard[[i,j]] == kingblack) && getSide(newBoard[[i,j]]) == side) {
-                kingSquare = [i,j];
+        // find king square
+        for(let i = 0; i <= 7; ++i) {
+            for(let j = 0; j <= 7; ++j) {
+                if((newBoard[[i,j]] == kingwhite || newBoard[[i,j]] == kingblack) && getSide(newBoard[[i,j]]) == side) {
+                    kingSquare = [i,j];
+                }
             }
         }
+
+        var x = kingSquare[0];
+        var y = kingSquare[1];
+
+    } else {
+        var x = override[0];
+        var y = override[1];
     }
 
-    const x = kingSquare[0];
-    const y = kingSquare[1];
 
     const isOutOfBounds = (i, j) => i < 0 || i > 7 || j < 0 || j > 7; 
     const notOccupied = (i, j) => !isOutOfBounds(i,j) && newBoard[[i,j]] === null;
@@ -311,8 +372,8 @@ const isLegalMove = (board, side, startSquare, endSquare) => {
 const alterBoard = (board, startSquare, endSquare) => {
     // for now, just move startSquare to endSquare, this will need to be more sophisticated later
     const piece = board[startSquare];
-    board[endSquare] = piece;
     board[startSquare] = null;
+    board[endSquare] = piece;
 }
 
 const getSide = (piece) => {
@@ -331,13 +392,59 @@ const isPossibleMove = (selectedSquare, currentSquare, possibleMoves) => {
 
 const pieceIsInCheck = (piece, sideToPlay, isInCheck) => (piece == kingwhite || piece == kingblack) && isInCheck && getSide(piece) == sideToPlay;
 
+const moveEquals = (arr, x, y) => arr[0] == x && arr[1] == y;
+
 const makeMove = (board, startSquare, piece, droppedSquare, setSelectedSquare, setSideToPlay) => {
-    if(board[droppedSquare][0]) takeSoundVar.play();
-    else moveSoundVar.play();
-    board[startSquare][1](null);
-    board[droppedSquare][1](piece);
+    
+    if(piece == kingwhite && moveEquals(startSquare, 7, 4) && moveEquals(droppedSquare, 7, 0)) {
+        board[[7,4]][1](null);
+        board[[7,0]][1](null);
+        board[[7,2]][1](kingwhite);
+        board[[7,3]][1](rookwhite);
+        moveSoundVar.play();
+    } else if (piece == kingwhite && moveEquals(startSquare, 7, 4) && moveEquals(droppedSquare, 7, 7)) {
+        board[[7,4]][1](null);
+        board[[7,7]][1](null);
+        board[[7,6]][1](kingwhite);
+        board[[7,5]][1](rookwhite);
+        moveSoundVar.play();
+    }  else if (piece == kingblack && moveEquals(startSquare, 0, 4) && moveEquals(droppedSquare, 0, 0)) {
+        board[[0,4]][1](null);
+        board[[0,0]][1](null);
+        board[[0,2]][1](kingblack);
+        board[[0,3]][1](rookblack);
+        moveSoundVar.play();
+    } else if (piece == kingblack && moveEquals(startSquare, 0, 4) && moveEquals(droppedSquare, 0, 7)) {
+        board[[0,4]][1](null);
+        board[[0,7]][1](null);
+        board[[0,6]][1](kingblack);
+        board[[0,5]][1](rookblack);
+        moveSoundVar.play();
+    } else {
+        board[startSquare][1](null);
+        board[droppedSquare][1](piece);
+        if(board[droppedSquare][0]) takeSoundVar.play();
+        else moveSoundVar.play();
+    }
     setSelectedSquare([null, 0, 0, false]);
     setSideToPlay(sideToPlay => !sideToPlay);
+
+    if(piece == kingwhite) {
+        board["whiteCastleQueen"][1](false);
+        board["whiteCastleKing"][1](false);
+    } else if (piece == kingblack) {
+        board["blackCastleQueen"][1](false);
+        board["blackCastleKing"][1](false);
+    } else if (piece == rookwhite && moveEquals(startSquare, 7, 0)) {
+        board["whiteCastleQueen"][1](false);
+    } else if (piece == rookwhite && moveEquals(startSquare, 7, 7)) {
+        board["whiteCastleKing"][1](false);
+    } else if (piece == rookblack && moveEquals(startSquare, 0, 0)) {
+        board["blackCastleQueen"][1](false);
+    } else if (piece == rookblack && moveEquals(startSquare, 0, 7)) {
+        board["blackCastleKing"][1](false);
+    }
+
 }
 
 const addClickable = (el, board, setSelectedSquare, setSideToPlay, setHoveredSquare) => {
@@ -554,8 +661,7 @@ const Board = (props) => {
 
 
     useEffect(() => {
-        return;
-        if(!sideToPlay) {
+        if(!sideToPlay && !props.noBot) {
             const isDev = process.env.NODE_ENV == "development";
             const url = isDev ? "http://localhost:5000/getMove" : "https://polar-badlands-38570.herokuapp.com/getMove";
             axios.post(url, {'board': getBoardRepresentation(board)})
@@ -642,9 +748,12 @@ const Board = (props) => {
 
 function TestPage(props) {
 
+    const query = querySearch(props.location.search);
+    const noBot = 'noBot' in query;
+
     return (
         <div className="mainContainer" id="container">
-            <Board/>
+            <Board noBot={noBot}/>
         </div>
     );
 }

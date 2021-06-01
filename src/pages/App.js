@@ -21,7 +21,7 @@ function App() {
        <Route exact path="/chessFrontend" component={MainPage} />
        <Route exact path="/chessFrontend/play" component={PlayPage} />
        <Route exact path="/chessFrontend/about" component={AboutPage} />
-       <Route exact path="/chessFrontend/test" component={TestPage} />
+       <Route exact path="/chessFrontend/test" render={(props) => <TestPage {...props}/>} />
       </Router>
     );
   }
