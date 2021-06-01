@@ -1,27 +1,27 @@
 {
   "files": {
-    "main.css": "/chessProject/static/css/main.40c159ff.chunk.css",
-    "main.js": "/chessProject/static/js/main.ca7c89d7.chunk.js",
-    "main.js.map": "/chessProject/static/js/main.ca7c89d7.chunk.js.map",
-    "runtime-main.js": "/chessProject/static/js/runtime-main.e192fcda.js",
-    "runtime-main.js.map": "/chessProject/static/js/runtime-main.e192fcda.js.map",
-    "static/js/2.d84a3b14.chunk.js": "/chessProject/static/js/2.d84a3b14.chunk.js",
-    "static/js/2.d84a3b14.chunk.js.map": "/chessProject/static/js/2.d84a3b14.chunk.js.map",
-    "static/js/3.d5317475.chunk.js": "/chessProject/static/js/3.d5317475.chunk.js",
-    "static/js/3.d5317475.chunk.js.map": "/chessProject/static/js/3.d5317475.chunk.js.map",
-    "index.html": "/chessProject/index.html",
-    "static/css/main.40c159ff.chunk.css.map": "/chessProject/static/css/main.40c159ff.chunk.css.map",
-    "static/js/2.d84a3b14.chunk.js.LICENSE.txt": "/chessProject/static/js/2.d84a3b14.chunk.js.LICENSE.txt",
-    "static/media/arrow.e078f153.svg": "/chessProject/static/media/arrow.e078f153.svg",
-    "static/media/blackking.183b682a.svg": "/chessProject/static/media/blackking.183b682a.svg",
-    "static/media/pieceMove.651ad549.mp3": "/chessProject/static/media/pieceMove.651ad549.mp3",
-    "static/media/pieceTake.2b304e3e.mp3": "/chessProject/static/media/pieceTake.2b304e3e.mp3",
-    "static/media/whiteking.4cb5ccf6.svg": "/chessProject/static/media/whiteking.4cb5ccf6.svg"
+    "main.css": "/chess/static/css/main.40c159ff.chunk.css",
+    "main.js": "/chess/static/js/main.246db4d9.chunk.js",
+    "main.js.map": "/chess/static/js/main.246db4d9.chunk.js.map",
+    "runtime-main.js": "/chess/static/js/runtime-main.f1d8c087.js",
+    "runtime-main.js.map": "/chess/static/js/runtime-main.f1d8c087.js.map",
+    "static/js/2.d84a3b14.chunk.js": "/chess/static/js/2.d84a3b14.chunk.js",
+    "static/js/2.d84a3b14.chunk.js.map": "/chess/static/js/2.d84a3b14.chunk.js.map",
+    "static/js/3.d5317475.chunk.js": "/chess/static/js/3.d5317475.chunk.js",
+    "static/js/3.d5317475.chunk.js.map": "/chess/static/js/3.d5317475.chunk.js.map",
+    "index.html": "/chess/index.html",
+    "static/css/main.40c159ff.chunk.css.map": "/chess/static/css/main.40c159ff.chunk.css.map",
+    "static/js/2.d84a3b14.chunk.js.LICENSE.txt": "/chess/static/js/2.d84a3b14.chunk.js.LICENSE.txt",
+    "static/media/arrow.e078f153.svg": "/chess/static/media/arrow.e078f153.svg",
+    "static/media/blackking.183b682a.svg": "/chess/static/media/blackking.183b682a.svg",
+    "static/media/pieceMove.651ad549.mp3": "/chess/static/media/pieceMove.651ad549.mp3",
+    "static/media/pieceTake.2b304e3e.mp3": "/chess/static/media/pieceTake.2b304e3e.mp3",
+    "static/media/whiteking.4cb5ccf6.svg": "/chess/static/media/whiteking.4cb5ccf6.svg"
   },
   "entrypoints": [
-    "static/js/runtime-main.e192fcda.js",
+    "static/js/runtime-main.f1d8c087.js",
     "static/js/2.d84a3b14.chunk.js",
     "static/css/main.40c159ff.chunk.css",
-    "static/js/main.ca7c89d7.chunk.js"
+    "static/js/main.246db4d9.chunk.js"
   ]
 }
