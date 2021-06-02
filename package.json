@@ -2,7 +2,7 @@
   "name": "chesswebsite",
   "version": "0.1.0",
   "private": true,
-  "homepage": "http://rholterhus.github.io/chessFrontend",
+  "homepage": "http://rholterhus.github.io/chess",
   "dependencies": {
     "@kennethormandy/react-fittext": "^0.6.0",
     "@testing-library/jest-dom": "^5.11.9",

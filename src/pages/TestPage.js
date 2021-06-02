@@ -1,5 +1,5 @@
 import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
-import './testingPage.css';
+import './TestPage.css';
 
 import bishopblack from '../images/bishopblack.png';
 import bishopwhite from '../images/bishopwhite.png';
@@ -43,6 +43,37 @@ const getColor = (x,y,opacity=1) => (x % 2) ? ((y % 2) ? lightBrown(opacity) : d
 const getColor2 = (x, y) => (x % 2) ? ((y % 2) ? "rgba(166,170,101,255)" : "rgba(104,84,14,255)") : ((y % 2) ? "rgba(104,84,14,255)" : "rgba(166,170,101,255)")
 const getRed = (x, y) => (x % 2) ? ((y % 2) ? "#f24a36" : "#a81416") : ((y % 2) ? "#a81416" : "#f24a36")
 
+const whitePieces = {
+    pawnp: pawnwhite,
+    kingp: kingwhite,
+    bishopp: bishopwhite,
+    rookp: rookwhite,
+    knightp: knightwhite,
+    queenp: queenwhite,
+
+    pawno: pawnblack,
+    kingo: kingblack,
+    bishopo: bishopblack,
+    rooko: rookblack,
+    knighto: knightblack,
+    queeno: queenblack
+}
+
+const blackPieces = {
+    pawnp: pawnblack,
+    kingp: kingblack,
+    bishopp: bishopblack,
+    rookp: rookblack,
+    knightp: knightblack,
+    queenp: queenblack,
+
+    pawno: pawnwhite,
+    kingo: kingwhite,
+    bishopo: bishopwhite,
+    rooko: rookwhite,
+    knighto: knightwhite,
+    queeno: queenwhite
+}
 
 
 let root = document.documentElement;
@@ -55,7 +86,7 @@ const ChessTile = (props) => {
                             id={"piece-" + props.row + "-" + props.col}
                             className={props.selected ? "selectedPiece" : props.isOnSideToPlay ? "selectablePiece" : "selectablePiece"}
                             draggable="false" 
-                            src={props.piece}
+                            src={props.playerSide == "white" ? whitePieces[props.piece] : blackPieces[props.piece]}
                             style={pieceOffset} 
                             onPointerDown={props.isOnSideToPlay ? props.handleTileClick : null}
                             onPointerUp={props.isOnSideToPlay ? props.handleTileUnClick : null}
@@ -83,18 +114,9 @@ const ChessTile = (props) => {
         startSquare: [props.row, props.col]
     }
 
-    const inner = <div className="chessTile" id={props.row + "-" + props.col} style={tileStyle}>
-                        <div className={props.isPossibleMove && piece ? "tileCorners": "tileCircle"} id={"circle-" + props.row + "-" + props.col} style={style}>
-                            <DragDropContainer targetKey="chessTarget" dragData={dragData} noDragging={!props.isOnSideToPlay}>
-                                {piece}
-                            </DragDropContainer>
-                        </div>
-                    </div>;
 
     return (
-        <DropTarget targetKey={"chessTarget"} onHit={e => props.handleDrop(e, [props.row, props.col], props.isPossibleMove)} onDragEnter={props.isPossibleMove ? props.handleTileHoverEnter : () => {}} onDragLeave={props.isPossibleMove ? props.handleTileHoverLeave : () => {}}>
-            {inner}
-        </DropTarget>
+        <div className="chessTile" id={props.row + "-" + props.col} style={tileStyle}></div>
     );
 }
 
@@ -141,7 +163,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
     const side = getSide(selectedPiece);
     let ans = []
     
-    if(selectedPiece == pawnwhite) {
+    if(selectedPiece == "pawnp") {
         if(!isOccupied(board, x-1, y) && withinBoard(x-1, y)) {
             ans.push([x-1,y]);
             if(x == "6" && !isOccupied(board, x-2, y)) ans.push([x-2,y]);
@@ -150,7 +172,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
         if(isOccupiedByBlack(board, x-1, y+1)) ans.push([x-1,y+1]);
     }
 
-    if(selectedPiece == pawnblack) {
+    if(selectedPiece == "pawno") {
         if(!isOccupied(board, x+1, y) && withinBoard(x+1, y)) {
             ans.push([x+1,y]);
             if(x == "1" && !isOccupied(board, x+2, y)) ans.push([x+2,y]);
@@ -159,7 +181,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
         if(isOccupiedByWhite(board, x+1, y+1)) ans.push([x+1,y+1]);
     }
 
-    if(selectedPiece == knightwhite || selectedPiece == knightblack) {
+    if(selectedPiece == "knightp" || selectedPiece == "knighto") {
         const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
         const possibleMoves = [[1,2], [1,-2], [-1,2], [-1,-2], [2,1], [-2,1], [2,-1], [-2,-1]];
         for(let i = 0; i < possibleMoves.length; ++i) {
@@ -168,7 +190,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
         }
     }
 
-    if(selectedPiece == bishopwhite || selectedPiece == bishopblack || selectedPiece == queenwhite || selectedPiece == queenblack) {        
+    if(selectedPiece == "bishopp" || selectedPiece == "bishopo" || selectedPiece == "queenp" || selectedPiece == "queeno") {        
         const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
         const otherSideOccupied = side ? isOccupiedByBlack : isOccupiedByWhite;
         const possibleMoves = [[1,1], [-1, 1], [1,-1], [-1,-1]];
@@ -183,7 +205,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
         }
     }
 
-    if(selectedPiece == rookwhite || selectedPiece == rookblack || selectedPiece == queenwhite || selectedPiece == queenblack) {        
+    if(selectedPiece == "rookp" || selectedPiece == "rooko" || selectedPiece == "queenp" || selectedPiece == "queeno") {        
         const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
         const otherSideOccupied = side ? isOccupiedByBlack : isOccupiedByWhite;
         const possibleMoves = [[0,1], [0,-1], [1,0], [-1,0]];
@@ -198,7 +220,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
         }
     }
 
-    if(selectedPiece == kingwhite || selectedPiece == kingblack) {        
+    if(selectedPiece == "kingp" || selectedPiece == "kingo") {        
         const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
         const possibleMoves = [[0,1], [0,-1], [1,0], [-1,0], [-1,-1], [1,-1], [-1,1], [1,1]];
         for(let i = 0; i < possibleMoves.length; ++i) {
@@ -210,8 +232,8 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
     }
 
     // find castle moves
-    if(selectedPiece == kingwhite) {
-        if(board["whiteCastleQueen"][0] && !isOccupied(board, 7, 1) && !isOccupied(board, 7, 2) && !isOccupied(board, 7, 3)) {
+    if(selectedPiece == "kingp") {
+        if(board["pCastleQueen"][0] && !isOccupied(board, 7, 1) && !isOccupied(board, 7, 2) && !isOccupied(board, 7, 3)) {
                 // additionally check that no piece is attacking the [7,2], [7,3], [7,4] (checking 7,4 is equivalent to the king being in check)
                 let validCastle = true;
                 for(let i = 2; i <= 4; ++i) {
@@ -220,7 +242,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
                 if(validCastle) ans.push([7,0,"specialMove"]);
         }
 
-        if(board["whiteCastleKing"][0] && !isOccupied(board, 7, 5) && !isOccupied(board, 7, 6)) {
+        if(board["pCastleKing"][0] && !isOccupied(board, 7, 5) && !isOccupied(board, 7, 6)) {
             // additionally check that no piece is attacking the [7,4], [7,5], [7,6] (checking 7,4 is equivalent to the king being in check)
             let validCastle = true;
             for(let i = 4; i <= 6; ++i) {
@@ -230,8 +252,8 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
         }
     }
 
-    if(selectedPiece == kingblack) {
-        if(board["blackCastleQueen"][0] && !isOccupied(board, 0, 1) && !isOccupied(board, 0, 2) && !isOccupied(board, 0, 3)) {
+    if(selectedPiece == "kingo") {
+        if(board["oCastleQueen"][0] && !isOccupied(board, 0, 1) && !isOccupied(board, 0, 2) && !isOccupied(board, 0, 3)) {
                 // additionally check that no piece is attacking the [0,2], [0,3], [0,4] (checking 0,4 is equivalent to the king being in check)
                 let validCastle = true;
                 for(let i = 2; i <= 4; ++i) {
@@ -240,7 +262,7 @@ const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true
                 if(validCastle) ans.push([0,0,"specialMove"]);
         }
 
-        if(board["blackCastleKing"][0] && !isOccupied(board, 0, 5) && !isOccupied(board, 0, 6)) {
+        if(board["oCastleKing"][0] && !isOccupied(board, 0, 5) && !isOccupied(board, 0, 6)) {
             // additionally check that no piece is attacking the [0,4], [0,5], [0,6] (checking 0,4 is equivalent to the king being in check)
             let validCastle = true;
             for(let i = 4; i <= 6; ++i) {
@@ -287,7 +309,7 @@ const isLegalMove = (board, side, startSquare, endSquare, override=null) => {
         // find king square
         for(let i = 0; i <= 7; ++i) {
             for(let j = 0; j <= 7; ++j) {
-                if((newBoard[[i,j]] == kingwhite || newBoard[[i,j]] == kingblack) && getSide(newBoard[[i,j]]) == side) {
+                if((newBoard[[i,j]] == "kingp" || newBoard[[i,j]] == "kingo") && getSide(newBoard[[i,j]]) == side) {
                     kingSquare = [i,j];
                 }
             }
@@ -308,9 +330,9 @@ const isLegalMove = (board, side, startSquare, endSquare, override=null) => {
     // check for knight captures
 
     const isOppositeKnight = side ? 
-    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == knightblack 
+    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == "knighto" 
     : 
-    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == knightwhite;
+    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == "knightp";
     const possibleKnightMoves = [[1,2], [1,-2], [-1,2], [-1,-2], [2,1], [-2,1], [2,-1], [-2,-1]]
     for(let i = 0; i < possibleKnightMoves.length; ++i) {
         const [diffx, diffy] = possibleKnightMoves[i];
@@ -320,9 +342,9 @@ const isLegalMove = (board, side, startSquare, endSquare, override=null) => {
     // check for rook captures
 
     const isOppositeRookorQueen = side ? 
-    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == rookblack || newBoard[[i,j]] == queenblack)
+    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == "rooko" || newBoard[[i,j]] == "queeno")
      : 
-    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == rookwhite || newBoard[[i,j]] == queenwhite);
+    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == "rookp" || newBoard[[i,j]] == "queenp");
     const possibleRookMoves = [[0,1], [0,-1], [1,0], [-1,0]];
     for(let i = 0; i < possibleRookMoves.length; ++i) {
         const [diffx, diffy] = possibleRookMoves[i];
@@ -335,9 +357,9 @@ const isLegalMove = (board, side, startSquare, endSquare, override=null) => {
     // check for bishop captures
 
     const isOppositeBishoporQueen = side ? 
-    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == bishopblack || newBoard[[i,j]] == queenblack)
+    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == "bishopo" || newBoard[[i,j]] == "queeno")
     :
-    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == bishopwhite || newBoard[[i,j]] == queenwhite);
+    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == "bishopp" || newBoard[[i,j]] == "queenp");
     const possibleBishopMoves = [[-1,1], [-1,-1], [1,1], [1,-1]];
     for(let i = 0; i < possibleBishopMoves.length; ++i) {
         const [diffx, diffy] = possibleBishopMoves[i];
@@ -349,9 +371,9 @@ const isLegalMove = (board, side, startSquare, endSquare, override=null) => {
     // check for pawn captures
 
     const isOppositePawn = side ? 
-    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == pawnblack
+    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == "pawno"
     :
-    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == pawnwhite
+    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == "pawnp"
     const possiblePawnMoves =  side ? 
     [[-1,1], [-1,-1]]
     :
@@ -377,12 +399,12 @@ const alterBoard = (board, startSquare, endSquare) => {
 }
 
 const getSide = (piece) => {
-    return piece == kingwhite ||
-        piece == queenwhite ||
-        piece == bishopwhite ||
-        piece == knightwhite ||
-        piece == rookwhite ||
-        piece == pawnwhite;
+    return piece == "kingp" ||
+        piece == "queenp" ||
+        piece == "bishopp" ||
+        piece == "knightp" ||
+        piece == "rookp" ||
+        piece == "pawnp";
 }
 
 const isPossibleMove = (selectedSquare, currentSquare, possibleMoves) => {
@@ -390,35 +412,35 @@ const isPossibleMove = (selectedSquare, currentSquare, possibleMoves) => {
     else return false;
 }
 
-const pieceIsInCheck = (piece, sideToPlay, isInCheck) => (piece == kingwhite || piece == kingblack) && isInCheck && getSide(piece) == sideToPlay;
+const pieceIsInCheck = (piece, sideToPlay, isInCheck) => (piece == "kingp" || piece == "kingo") && isInCheck && getSide(piece) == sideToPlay;
 
 const moveEquals = (arr, x, y) => arr[0] == x && arr[1] == y;
 
 const makeMove = (board, startSquare, piece, droppedSquare, setSelectedSquare, setSideToPlay) => {
     
-    if(piece == kingwhite && moveEquals(startSquare, 7, 4) && moveEquals(droppedSquare, 7, 0)) {
+    if(piece == "kingp" && moveEquals(startSquare, 7, 4) && moveEquals(droppedSquare, 7, 0)) {
         board[[7,4]][1](null);
         board[[7,0]][1](null);
-        board[[7,2]][1](kingwhite);
-        board[[7,3]][1](rookwhite);
+        board[[7,2]][1]("kingp");
+        board[[7,3]][1]("rookp");
         moveSoundVar.play();
-    } else if (piece == kingwhite && moveEquals(startSquare, 7, 4) && moveEquals(droppedSquare, 7, 7)) {
+    } else if (piece == "kingp" && moveEquals(startSquare, 7, 4) && moveEquals(droppedSquare, 7, 7)) {
         board[[7,4]][1](null);
         board[[7,7]][1](null);
-        board[[7,6]][1](kingwhite);
-        board[[7,5]][1](rookwhite);
+        board[[7,6]][1]("kingp");
+        board[[7,5]][1]("rookp");
         moveSoundVar.play();
-    }  else if (piece == kingblack && moveEquals(startSquare, 0, 4) && moveEquals(droppedSquare, 0, 0)) {
+    }  else if (piece == "kingo" && moveEquals(startSquare, 0, 4) && moveEquals(droppedSquare, 0, 0)) {
         board[[0,4]][1](null);
         board[[0,0]][1](null);
-        board[[0,2]][1](kingblack);
-        board[[0,3]][1](rookblack);
+        board[[0,2]][1]("kingo");
+        board[[0,3]][1]("rooko");
         moveSoundVar.play();
-    } else if (piece == kingblack && moveEquals(startSquare, 0, 4) && moveEquals(droppedSquare, 0, 7)) {
+    } else if (piece == "kingo" && moveEquals(startSquare, 0, 4) && moveEquals(droppedSquare, 0, 7)) {
         board[[0,4]][1](null);
         board[[0,7]][1](null);
-        board[[0,6]][1](kingblack);
-        board[[0,5]][1](rookblack);
+        board[[0,6]][1]("kingo");
+        board[[0,5]][1]("rooko");
         moveSoundVar.play();
     } else {
         board[startSquare][1](null);
@@ -429,20 +451,20 @@ const makeMove = (board, startSquare, piece, droppedSquare, setSelectedSquare, s
     setSelectedSquare([null, 0, 0, false]);
     setSideToPlay(sideToPlay => !sideToPlay);
 
-    if(piece == kingwhite) {
-        board["whiteCastleQueen"][1](false);
-        board["whiteCastleKing"][1](false);
-    } else if (piece == kingblack) {
-        board["blackCastleQueen"][1](false);
-        board["blackCastleKing"][1](false);
-    } else if (piece == rookwhite && moveEquals(startSquare, 7, 0)) {
-        board["whiteCastleQueen"][1](false);
-    } else if (piece == rookwhite && moveEquals(startSquare, 7, 7)) {
-        board["whiteCastleKing"][1](false);
-    } else if (piece == rookblack && moveEquals(startSquare, 0, 0)) {
-        board["blackCastleQueen"][1](false);
-    } else if (piece == rookblack && moveEquals(startSquare, 0, 7)) {
-        board["blackCastleKing"][1](false);
+    if(piece == "kingp") {
+        board["pCastleQueen"][1](false);
+        board["pCastleKing"][1](false);
+    } else if (piece == "kingo") {
+        board["oCastleQueen"][1](false);
+        board["oCastleKing"][1](false);
+    } else if (piece == "rookp" && moveEquals(startSquare, 7, 0)) {
+        board["pCastleQueen"][1](false);
+    } else if (piece == "rookp" && moveEquals(startSquare, 7, 7)) {
+        board["pCastleKing"][1](false);
+    } else if (piece == "rooko" && moveEquals(startSquare, 0, 0)) {
+        board["oCastleQueen"][1](false);
+    } else if (piece == "rooko" && moveEquals(startSquare, 0, 7)) {
+        board["oCastleKing"][1](false);
     }
 
 }
@@ -475,19 +497,19 @@ var getBoardRepresentation = function(board) {
     for(var num = 63; num >= 0; num--) {
       var i = Math.floor(num/8);
       var j = (7 - (num % 8)) % 8;
-      if(board[[i,j]][0] == pawnwhite) s += 'P'
-      else if(board[[i,j]][0] == knightwhite) s += 'H'
-      else if(board[[i,j]][0] == bishopwhite) s += 'B'
-      else if(board[[i,j]][0] == rookwhite) s += 'R'
-      else if(board[[i,j]][0] == queenwhite) s += 'Q'
-      else if(board[[i,j]][0] == kingwhite) s += 'K'
+      if(board[[i,j]][0] == "pawnp") s += 'P'
+      else if(board[[i,j]][0] == "knightp") s += 'H'
+      else if(board[[i,j]][0] == "bishopp") s += 'B'
+      else if(board[[i,j]][0] == "rookp") s += 'R'
+      else if(board[[i,j]][0] == "queenp") s += 'Q'
+      else if(board[[i,j]][0] == "kingp") s += 'K'
   
-      else if(board[[i,j]][0] == pawnblack) s += 'O'
-      else if(board[[i,j]][0] == knightblack) s += 'L'
-      else if(board[[i,j]][0] == bishopblack) s += 'D'
-      else if(board[[i,j]][0] == rookblack) s += 'C'
-      else if(board[[i,j]][0] == queenblack) s += 'W'
-      else if(board[[i,j]][0] == kingblack) s += 'I'
+      else if(board[[i,j]][0] == "pawno") s += 'O'
+      else if(board[[i,j]][0] == "knighto") s += 'L'
+      else if(board[[i,j]][0] == "bishopo") s += 'D'
+      else if(board[[i,j]][0] == "rooko") s += 'C'
+      else if(board[[i,j]][0] == "queeno") s += 'W'
+      else if(board[[i,j]][0] == "kingo") s += 'I'
       else s += '_';
     }
     return s;
@@ -533,10 +555,10 @@ const Modal = (props) => {
     }
 
     const getPiece = (num) => {
-        if(num == 0) return !props.isOpen ? queenblack : queenwhite;
-        if(num == 1) return !props.isOpen ? rookblack : rookwhite;
-        if(num == 2) return !props.isOpen ? bishopblack : bishopwhite;
-        if(num == 3) return !props.isOpen ? knightblack : knightwhite;
+        if(num == 0) return !props.isOpen ? "queeno" : "queenp";
+        if(num == 1) return !props.isOpen ? "rooko" : "rookp";
+        if(num == 2) return !props.isOpen ? "bishopo" : "bishopp";
+        if(num == 3) return !props.isOpen ? "knighto" : "knightp";
     }
 
     var modal = null;
@@ -572,10 +594,12 @@ const Board = (props) => {
     const board = useBoard();
     const [selectedSquare, setSelectedSquare] = useState([null, 0, 0, false]); //piece, offsetX, offsetY, wasSelectedPreviously
     const [hoveredSquare, setHoveredSquare] = useState(null);
-    const [sideToPlay, setSideToPlay] = useState(true); // white is true, black is false
+    const [sideToPlay, setSideToPlay] = useState(props.playerSide == "white"); // player's side to play iff true
     const [possibleMoves, setPossibleMoves] = useState(null);
     const [isInCheck, setIsInCheck] = useState(null);
     const [modalIsOpen, setModalIsOpen] = useState(null);
+    const [boardHistory, setBoardHistory] = useState([]);
+
 
     const handleTileClick = useCallback((e) => {
         var rect = e.target.getBoundingClientRect();
@@ -619,11 +643,11 @@ const Board = (props) => {
     const handleModalClick = useCallback((num) => {
         // simply find the pawn of interest and change it to the selected piece
         for(let i = 0; i <= 7; ++i) {
-            if(board[[0,i]][0] == pawnwhite) {
-                const piece = [queenwhite, rookwhite, bishopwhite, knightwhite][num];
+            if(board[[0,i]][0] == "pawnp") {
+                const piece = ["queenp", "rookp", "bishopp", "knightp"][num];
                 board[[0,i]][1](piece);
-            } else if(board[[7,i]][0] == pawnblack) {
-                const piece = [queenblack, rookblack, bishopblack, knightblack][num];
+            } else if(board[[7,i]][0] == "pawno") {
+                const piece = ["queeno", "rooko", "bishopo", "knighto"][num];
                 board[[7,i]][1](piece);
             }
         }
@@ -632,9 +656,9 @@ const Board = (props) => {
 
     useEffect(() => {
         for(let i = 0; i <= 7; ++i) {
-            if(board[[0,i]][0] == pawnwhite) {
+            if(board[[0,i]][0] == "pawnp") {
                 setModalIsOpen(true);
-            } else if(board[[7,i]][0] == pawnblack) {
+            } else if(board[[7,i]][0] == "pawno") {
                 setModalIsOpen(false);
             }
         }
@@ -648,7 +672,7 @@ const Board = (props) => {
                 newPossibleMoves["piece-" + i + "-" + j] = getAllPossibleMovesFromSquare(board, i + "-" + j);
                 for(let k = 0; k < newPossibleMoves["piece-" + i + "-" + j].length; k++) {
                     const [x, y] = newPossibleMoves["piece-" + i + "-" + j][k];
-                    if((board[[x,y]][0] == kingwhite || board[[x,y]][0] == kingblack) && getSide(board[[x,y]][0]) == sideToPlay) {
+                    if((board[[x,y]][0] == "kingp" || board[[x,y]][0] == "kingo") && getSide(board[[x,y]][0]) == sideToPlay) {
                         isInCheck = true;
                     }
                 }
@@ -680,6 +704,10 @@ const Board = (props) => {
 
 
     useEffect(() => {
+        setBoardHistory(arr => arr.concat(JSON.parse(JSON.stringify(board))));
+    }, [sideToPlay]);
+
+    useEffect(() => {
         if(possibleMoves) {
             const clickableSquares = possibleMoves[selectedSquare[0]];
             if(clickableSquares) {
@@ -703,7 +731,6 @@ const Board = (props) => {
     return (
         <div className="boardContainer">
             <div className="board" id="boardid">
-                <MemoizedModal isOpen={modalIsOpen} handleModalClick={handleModalClick}/>
                 {eight.map(row => 
                     eight.map(col => 
                         <MemoizedChessTile
@@ -711,6 +738,7 @@ const Board = (props) => {
                         row={row} 
                         col={col}
                         piece={board[[row,col]][0]}
+                        playerSide={props.playerSide}
                         isInCheck={pieceIsInCheck(board[[row,col]][0], sideToPlay, isInCheck)}
                         isOnSideToPlay={getSide(board[[row,col]][0]) === sideToPlay}
                         selected={selectedSquare[0] === "piece-" + row + "-" + col ? selectedSquare : null}
@@ -725,22 +753,6 @@ const Board = (props) => {
                     )
                 )}
             </div>
-            {/* <div className="boardButtonContainer">
-                <div className="boardButton" 
-                style={{backgroundColor: sideToPlay ? "white" : "black"}}
-                onMouseEnter={e => e.target.style.backgroundColor = "gray"}
-                onMouseLeave={e => e.target.style.backgroundColor = sideToPlay ? "white" : "black"}
-                >
-                    <i className="arrow left"></i>
-                </div>
-                <div className="boardButton" 
-                style={{backgroundColor: sideToPlay ? "white" : "black"}}
-                onMouseEnter={e => e.target.style.backgroundColor = "gray"}
-                onMouseLeave={e => e.target.style.backgroundColor = sideToPlay ? "white" : "black"}
-                >
-                    <i className="arrow right"></i>
-                </div>
-            </div> */}
         </div>
     );
 }
@@ -750,10 +762,10 @@ function TestPage(props) {
 
     const query = querySearch(props.location.search);
     const noBot = 'noBot' in query;
-
+    const playerSide = query['side'];
     return (
         <div className="mainContainer" id="container">
-            <Board noBot={noBot}/>
+            <Board noBot={noBot} playerSide={playerSide}/>
         </div>
     );
 }
