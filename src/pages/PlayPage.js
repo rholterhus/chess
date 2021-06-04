@@ -737,6 +737,7 @@ const Board = (props) => {
         }
     }, [selectedSquare])
 
+
     
     return (
         <div className="boardContainer">
@@ -764,28 +765,12 @@ const Board = (props) => {
                     )
                 )}
             </div>
-            {/* <div className="boardButtonContainer">
-                <div className="boardButton" 
-                style={{backgroundColor: sideToPlay ? "white" : "black"}}
-                onMouseEnter={e => e.target.style.backgroundColor = "gray"}
-                onMouseLeave={e => e.target.style.backgroundColor = sideToPlay ? "white" : "black"}
-                >
-                    <i className="arrow left"></i>
-                </div>
-                <div className="boardButton" 
-                style={{backgroundColor: sideToPlay ? "white" : "black"}}
-                onMouseEnter={e => e.target.style.backgroundColor = "gray"}
-                onMouseLeave={e => e.target.style.backgroundColor = sideToPlay ? "white" : "black"}
-                >
-                    <i className="arrow right"></i>
-                </div>
-            </div> */}
         </div>
     );
 }
 
 
-function TestPage(props) {
+function PlayPage(props) {
 
     const query = querySearch(props.location.search);
     const noBot = 'noBot' in query;
@@ -797,4 +782,4 @@ function TestPage(props) {
     );
 }
 
-export default TestPage;
+export default PlayPage;

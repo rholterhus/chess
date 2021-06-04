@@ -1,8 +1,6 @@
 :root {
-    --boardSideLength: 85vmin;
-    --boardButtonHeight: 0vmin; /*7.5vmin;*/
-    --arrowColor: black;
-  }
+    --boardSideLength: 20vmin;
+}
 
 .mainContainer {
     display: flex;
@@ -37,44 +35,6 @@
     z-index: -1;
     display: grid;
     grid-template-columns: repeat(8, minmax(0, 1fr));
-}
-
-.boardButtonContainer {
-    background-color: white;
-    width: 100%;
-    height: var(--boardButtonHeight);
-    align-items: center;
-    display: flex;
-    text-align: center;
-}
-
-.boardButton {
-    width: 50%;
-    height: 100%;
-    transition: 1.5s;
-    display: flex;
-    align-items: center;
-    cursor: pointer;
-}
-
-.arrow {
-    border: solid var(--arrowColor);
-    border-width: 0 4px 4px 0;
-    display: inline-block;
-    padding: 4px;
-    position: relative;
-    left: 50%;
-    transition: 1.5s;
-}
-
-.right {
-    transform: rotate(-45deg);
-    -webkit-transform: rotate(-45deg);
-}
-
-.left {
-    transform: rotate(135deg);
-    -webkit-transform: rotate(135deg);
 }
 
 .chessTile {
@@ -157,5 +117,5 @@
     position: absolute;
     cursor: pointer;
     /* transition: 0.1s; */
-    /* background-color: rgba(0, 0, 0, 0.5);; */
+    /* background-color: rgba(0, 0, 0, 0.5); */
 }
