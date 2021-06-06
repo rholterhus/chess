@@ -17,26 +17,33 @@ const CreateModal = (props) => {
     const history = useHistory();
     const { websocket, saveWebsocket } = useWebSocket();
     const [room, setRoom] = useState(null);
+    const [sideChosen, setSideChosen] = useState(1); // 1 is random, 0 white, 2 black
+    const [side, setSide] = useState(null);
+
+    
+    var botSide;
+    if(sideChosen === 0) botSide = "white";
+    if(sideChosen === 2) botSide = "black";
+    else botSide = Math.random() < 0.5 ? "white" : "black";
 
     const style = {
         backgroundColor: props.isOpen !== null ? "rgb(0,0,0,0.3)" : "rgb(0,0,0,0)"
     }
 
-
-    if(room === 'ready') return <Redirect to='/chess/play?side=white&noBot'/>;
+    if(room === 'ready') history.push(`/chess/play?side=${side}&noBot`);
 
     return (
         props.isOpen ? 
         <div className="mainPageModalBackground" onClick={(e) => e.target.className == "mainPageModalBackground" ? props.onOutsideClick() : null} style={style}>
            <div className="mainPageModal">
             <div className="sideSelect">
-                    <div className="modalButtonContainer">
+                    <div className="modalButtonContainer" style={{ backgroundColor: sideChosen === 0 ? "gray" : null}} onPointerDown={() => setSideChosen(0)}>
                         <img className="mainModalButton"src={kingwhite}/>
                     </div>
-                    <div className="modalButtonContainer">
+                    <div className="modalButtonContainer" style={{ backgroundColor: sideChosen === 1 ? "gray" : null}} onPointerDown={() => setSideChosen(1)}>
                         <div className="mainModalButton">Random</div>
                     </div>
-                    <div className="modalButtonContainer">
+                    <div className="modalButtonContainer" style={{ backgroundColor: sideChosen === 2 ? "gray" : null}} onPointerDown={() => setSideChosen(2)}>
                         <img className="mainModalButton" src={kingblack}/>
                     </div>
                 </div>
@@ -46,8 +53,8 @@ const CreateModal = (props) => {
                             room
                         :
                             <>
-                                <button onClick={() => createWebsocket(saveWebsocket, setRoom, 'create')}>Create Game</button>
-                                <Link to='/chess/play?side=white&noBot'><button>Play Against Bot</button></Link>
+                                <button onClick={() => createWebsocket(saveWebsocket, setRoom, 'create', null, sideChosen, setSide)}>Create Game</button>
+                                <Link to={`chess/play?side=${botSide}`}><button>Play Against Bot</button></Link>
                             </>
                     }
                     
@@ -62,21 +69,23 @@ const CreateModal = (props) => {
 
 const JoinModal = (props) => {
 
+    const history = useHistory();
     const { websocket, saveWebsocket } = useWebSocket();
     const [room, setRoom] = useState(null);
+    const [side, setSide] = useState(null);
 
     const style = {
         backgroundColor: props.isOpen !== null ? "rgb(0,0,0,0.3)" : "rgb(0,0,0,0)"
     }
 
-    if(room === 'ready') return <Redirect to={'/chess/play?side=black&noBot'} state={{hey: "lol"}}/>
+    if(room === 'ready') history.push(`/chess/play?side=${side}&noBot`);
 
     return (
         props.isOpen ? 
         <div className="mainPageModalBackground" onClick={(e) => e.target.className == "mainPageModalBackground" ? props.onOutsideClick() : null} style={style}>
            <div className="mainPageModal">
                 <input type="text" onChange={(e) => setRoom(e.target.value)}></input>
-                <button onClick={() => createWebsocket(saveWebsocket, setRoom, 'join', room)}>Join room</button>
+                <button onClick={() => createWebsocket(saveWebsocket, setRoom, 'join', room, null, setSide)}>Join room</button>
            </div>
         </div>
         :
@@ -87,17 +96,22 @@ const JoinModal = (props) => {
 
 
 
-const createWebsocket = (setws, setRoom, action, room=null) => {
+const createWebsocket = (setws, setRoom, action, room, sideChosen, setSide) => {
     const isDev = process.env.NODE_ENV == "development";
+    console.log(isDev);
     const url = isDev ? "ws://localhost:5000" : "wss://polar-badlands-38570.herokuapp.com";
     const socket = new WebSocket(url);
 
     socket.addEventListener('open', function (event) {
         if(action === 'create') {
+            var side;
+            if(sideChosen === 0) side = "white";
+            if(sideChosen === 2) side = "black";
+            else side = Math.random() < 0.5 ? "white" : "black";
             socket.send(JSON.stringify({
                 type: 'create',
                 data: {
-                    side: 'white'
+                    side: side
                 }
             }));
         }
@@ -121,6 +135,7 @@ const createWebsocket = (setws, setRoom, action, room=null) => {
         }
 
         if(type === 'ready') {
+            setSide(data.side);
             setRoom('ready');
         }
 

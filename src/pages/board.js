@@ -89,8 +89,8 @@ const ChessTile = (props) => {
                             draggable="false" 
                             src={props.playerSide == "white" ? whitePieces[props.piece] : blackPieces[props.piece]}
                             style={pieceOffset} 
-                            onPointerDown={props.isOnSideToPlay ? props.handleTileClick : null}
-                            onPointerUp={props.isOnSideToPlay ? props.handleTileUnClick : null}
+                            onPointerDown={props.isOnSideToPlay && !props.cantMoveOpponent ? props.handleTileClick : null}
+                            onPointerUp={props.isOnSideToPlay && !props.cantMoveOpponent ? props.handleTileUnClick : null}
                             />
 
     const isActive = props.selected || props.hovered;
@@ -117,7 +117,7 @@ const ChessTile = (props) => {
 
     const inner = <div className="chessTile" id={props.row + "-" + props.col} style={tileStyle}>
                         <div className={props.isPossibleMove && piece ? "tileCorners": "tileCircle"} id={"circle-" + props.row + "-" + props.col} style={style}>
-                            <DragDropContainer targetKey="chessTarget" dragData={dragData} noDragging={!props.isOnSideToPlay}>
+                            <DragDropContainer targetKey="chessTarget" dragData={dragData} noDragging={!props.isOnSideToPlay || props.cantMoveOpponent}>
                                 {piece}
                             </DragDropContainer>
                         </div>
@@ -479,7 +479,7 @@ const makeMove = (board, startSquare, piece, droppedSquare, setSelectedSquare, s
 
 }
 
-const addClickable = (el, board, setSelectedSquare, setSideToPlay, setLastMove) => {
+const addClickable = (el, board, setSelectedSquare, setSideToPlay, setLastMove, websocket) => {
     el.style.cursor = "pointer";
     el.onmouseenter = () => el.style.backgroundColor = getColor2(el.id[0], el.id[2]);
     el.onmouseleave = () => el.style.backgroundColor = getColor(el.id[0], el.id[2]);
@@ -490,7 +490,7 @@ const addClickable = (el, board, setSelectedSquare, setSideToPlay, setLastMove) 
         const startSquare = [startPiece.id[6], startPiece.id[8]];
         const droppedSquare = [tile.id[0], tile.id[2]]
         makeMove(board, startSquare, board[startSquare][0], droppedSquare, setSelectedSquare, setSideToPlay);
-        setLastMove([startSquare, droppedSquare]);
+        if(websocket) setLastMove([startSquare, droppedSquare]);
     };
 }
     
@@ -525,18 +525,6 @@ var getBoardRepresentation = function(board) {
     }
     return s;
   }
-
-
-const noPossibleMoves = (board, possibleMoves, sideToPlay) => {
-    for(let i = 0; i <= 7; ++i) {
-        for(let j = 0; j <= 7; ++j) {
-            if(getSide(board[[i,j]][0]) === sideToPlay && possibleMoves["piece-" + i + "-" + j].length > 0) {
-                return false;
-            }
-        }
-    }
-    return true;
-}
 
 
 const mapper = (pos) => {
@@ -617,7 +605,7 @@ const Board = (props) => {
     const board = useBoard();
     const [selectedSquare, setSelectedSquare] = useState([null, 0, 0, false]); //piece, offsetX, offsetY, wasSelectedPreviously
     const [hoveredSquare, setHoveredSquare] = useState(null);
-    const [sideToPlay, setSideToPlay] = useState(props.playerSide == "white"); // player's side to play iff true
+    const [sideToPlay, setSideToPlay] = useState(props.playerSide == "white"); // player's time to play iff true
     const [possibleMoves, setPossibleMoves] = useState(null);
     const [isInCheck, setIsInCheck] = useState(null);
     const [modalIsOpen, setModalIsOpen] = useState(null);
@@ -662,7 +650,7 @@ const Board = (props) => {
     const handleDrop = useCallback((e, droppedTile, isPossibleMove) => {
         if(isPossibleMove) {
             makeMove(board, e.dragData.startSquare, e.dragData.piece, droppedTile, setSelectedSquare, setSideToPlay);
-            setLastMove([e.dragData.startSquare, droppedTile]);
+            if(websocket) setLastMove([e.dragData.startSquare, droppedTile]);
         }
     }, [board])
 
@@ -722,7 +710,6 @@ const Board = (props) => {
         }
         setPossibleMoves(newPossibleMoves);
         setIsInCheck(isInCheck);
-        sideToPlay ? root.style.setProperty('--arrowColor', "black") : root.style.setProperty('--arrowColor', "white");
     }, [sideToPlay, modalIsOpen]);
 
 
@@ -740,7 +727,6 @@ const Board = (props) => {
                 const startSquare = [fromX, fromY];
                 const droppedSquare = [toX, toY]
                 makeMove(board, startSquare, piece, droppedSquare, setSelectedSquare, setSideToPlay);
-                setLastMove(startSquare, droppedSquare);
             });
         } else if(!sideToPlay && websocket && lastMove) { // if we are in two player mode and we made a move
             websocket.send(JSON.stringify({
@@ -752,11 +738,6 @@ const Board = (props) => {
         }
     }, [sideToPlay, lastMove]);
 
-
-    // useEffect(() => {
-    //     setBoardHistory(arr => arr.concat(JSON.parse(JSON.stringify(board))));
-    // }, [sideToPlay]);
-
     useEffect(() => {
         if(possibleMoves) {
             const clickableSquares = possibleMoves[selectedSquare[0]];
@@ -765,7 +746,7 @@ const Board = (props) => {
                 for(let i = 0; i < clickableSquares.length; ++i) {
                     const [row, col] = clickableSquares[i];
                     let el = document.getElementById(row + "-" + col);
-                    addClickable(el, board, setSelectedSquare, setSideToPlay, setLastMove);
+                    addClickable(el, board, setSelectedSquare, setSideToPlay, setLastMove, websocket);
                     els.push(el);
                 }
                 return () => {
@@ -793,6 +774,7 @@ const Board = (props) => {
                         playerSide={props.playerSide}
                         isInCheck={pieceIsInCheck(board[[row,col]][0], sideToPlay, isInCheck)}
                         isOnSideToPlay={getSide(board[[row,col]][0]) === sideToPlay}
+                        cantMoveOpponent={websocket !== null && !sideToPlay} // false iff it is 2 player mode and it is the opponents time to move
                         selected={selectedSquare[0] === "piece-" + row + "-" + col ? selectedSquare : null}
                         hovered={hoveredSquare === row + "-" + col}
                         handleTileClick={handleTileClick}
