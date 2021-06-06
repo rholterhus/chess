@@ -1,6 +1,5 @@
-import React from 'react';
-import './board.css';
-import axios from 'axios';
+import React, { useState, useEffect, memo, useRef, useCallback } from 'react';
+import './playPage.css';
 
 import bishopblack from '../images/bishopblack.png';
 import bishopwhite from '../images/bishopwhite.png';
@@ -14,503 +13,800 @@ import pawnblack from '../images/pawnblack.png';
 import pawnwhite from '../images/pawnwhite.png';
 import knightblack from '../images/knightblack.png';
 import knightwhite from '../images/knightwhite.png';
+import {ReactComponent as Arrow} from '../images/arrow.svg';
+import useWebSocket from '../utils/websockets.js';
+
 
 import moveSound from '../sounds/pieceMove.mp3';
 import takeSound from '../sounds/pieceTake.mp3';
 
+import {Howl, Howler} from 'howler';
+
+import useBoard from '../utils/useBoard.js'
+
+import { DragDropContainer, DropTarget } from 'react-drag-drop-container';
 
 
-var lookup = {
-  "bishopblack": bishopblack,
-  "bishopwhite": bishopwhite,
-  "pawnblack": pawnblack,
-  "pawnwhite": pawnwhite,
-  "rookblack": rookblack, 
-  "rookwhite": rookwhite, 
-  "queenblack": queenblack,
-  "queenwhite": queenwhite,
-  "kingblack": kingblack,
-  "kingwhite": kingwhite,
-  "knightblack": knightblack,
-  "knightwhite": knightwhite,
+import axios from 'axios';
+
+const moveSoundVar = new Howl({
+    src: [moveSound]
+});
+const takeSoundVar = new Howl({
+    src: [takeSound]
+});
+
+const lightBrown = (opacity) => 'rgb(222,184,135,' + opacity + ")"
+const darkBrown = (opacity) => 'rgb(139,69,19,' + opacity + ")"
+const eight = [0,1,2,3,4,5,6,7]
+
+const getColor = (x,y,opacity=1) => (x % 2) ? ((y % 2) ? lightBrown(opacity) : darkBrown(opacity)) : ((y % 2) ? darkBrown(opacity) : lightBrown(opacity))
+const getColor2 = (x, y) => (x % 2) ? ((y % 2) ? "rgba(166,170,101,255)" : "rgba(104,84,14,255)") : ((y % 2) ? "rgba(104,84,14,255)" : "rgba(166,170,101,255)")
+const getRed = (x, y) => (x % 2) ? ((y % 2) ? "#f24a36" : "#a81416") : ((y % 2) ? "#a81416" : "#f24a36")
+
+const whitePieces = {
+    pawnp: pawnwhite,
+    kingp: kingwhite,
+    bishopp: bishopwhite,
+    rookp: rookwhite,
+    knightp: knightwhite,
+    queenp: queenwhite,
+
+    pawno: pawnblack,
+    kingo: kingblack,
+    bishopo: bishopblack,
+    rooko: rookblack,
+    knighto: knightblack,
+    queeno: queenblack
 }
 
-var getColor = (x,y) => (x % 2) ? ((y % 2) ? 'burlywood' : 'saddlebrown') : ((y % 2) ? 'saddlebrown' : 'burlywood')
+const blackPieces = {
+    pawnp: pawnblack,
+    kingp: kingblack,
+    bishopp: bishopblack,
+    rookp: rookblack,
+    knightp: knightblack,
+    queenp: queenblack,
 
-var getIcon = function(type, color) {
-  return type + color + '.png';
-}
-
-var eightByEight = []
-for(var i = 0; i < 8; i++) {
-  for(var j = 0; j < 8; j++) {
-    eightByEight.push([i,j]);
-  }
-}
-
-var reachableContains = function(arr, val) {
-  for(var i = 0; i < arr.length; ++i) {
-    if(arraysEqual(arr[i], val)) return true
-  }
-  return false
+    pawno: pawnwhite,
+    kingo: kingwhite,
+    bishopo: bishopwhite,
+    rooko: rookwhite,
+    knighto: knightwhite,
+    queeno: queenwhite
 }
 
 
-var isInPossibleMoves = function(move, allPossible) {
-  for(var i = 0; i < allPossible.length; ++i) {
-    if(arraysEqual(move[0], allPossible[i][0]) && arraysEqual(move[1], allPossible[i][1])) return true
-  }
-  return false
+let root = document.documentElement;
+
+const ChessTile = (props) => {
+
+    var piece = null;
+    const pieceOffset = props.selected ? {marginLeft: props.selected[1], marginTop: props.selected[2]} : null;
+    if(props.piece) piece = <img 
+                            id={"piece-" + props.row + "-" + props.col}
+                            className={props.selected ? "selectedPiece" : props.isOnSideToPlay ? "selectablePiece" : "selectablePiece"}
+                            draggable="false" 
+                            src={props.playerSide == "white" ? whitePieces[props.piece] : blackPieces[props.piece]}
+                            style={pieceOffset} 
+                            onPointerDown={props.isOnSideToPlay ? props.handleTileClick : null}
+                            onPointerUp={props.isOnSideToPlay ? props.handleTileUnClick : null}
+                            />
+
+    const isActive = props.selected || props.hovered;
+    const isPossibleMove = props.isPossibleMove;
+
+    const tileStyle = {
+        backgroundColor: props.isInCheck ? getRed(props.row, props.col) : isActive ? getColor2(props.row, props.col) : getColor(props.row, props.col)
+    };
+
+    const style = {}
+    const color = getColor2(props.row, props.col);
+    if(isPossibleMove) {
+        if(piece) style["background"] = `linear-gradient(to bottom left,  ${color} 12.5%, transparent 12.5%),\
+        linear-gradient(to bottom right,  ${color} 12.5%, transparent 12.5%),\
+        linear-gradient(to top left,  ${color} 12.5%, transparent 12.5%),\
+        linear-gradient(to top right, ${color} 12.5%, transparent 12.5%)`;
+        else style["backgroundColor"] = color;
+    }
+
+    const dragData = {
+        piece: props.piece,
+        startSquare: [props.row, props.col]
+    }
+
+    const inner = <div className="chessTile" id={props.row + "-" + props.col} style={tileStyle}>
+                        <div className={props.isPossibleMove && piece ? "tileCorners": "tileCircle"} id={"circle-" + props.row + "-" + props.col} style={style}>
+                            <DragDropContainer targetKey="chessTarget" dragData={dragData} noDragging={!props.isOnSideToPlay}>
+                                {piece}
+                            </DragDropContainer>
+                        </div>
+                    </div>;
+
+    return (
+        <DropTarget targetKey={"chessTarget"} onHit={e => props.handleDrop(e, [props.row, props.col], props.isPossibleMove)} onDragEnter={props.isPossibleMove ? props.handleTileHoverEnter : () => {}} onDragLeave={props.isPossibleMove ? props.handleTileHoverLeave : () => {}}>
+            {inner}
+        </DropTarget>
+    );
 }
 
 
-class ChessTile extends React.Component {
+const MemoizedChessTile = memo(ChessTile);
 
-  render() {
 
-    var color = getColor(this.props.x, this.props.y);
-    var selected = arraysEqual([this.props.x, this.props.y], this.props.selected)
-    var reachable = this.props.reachable
+const getTileFromEvent = (e) => {
+    if(e.target.className == "chessTile") {
+        return e.target;
+    } else if (e.target.className == "selectablePiece" || e.target.className == "selectedPiece" || e.target.className == "nonSelectablePiece") {
+        return e.target.parentNode.parentNode.parentNode.parentNode;
+    } else if (e.target.className == "tileCircle") {
+        return e.target.parentNode;
+    } else if (e.target.className == "ddcontainer") {
+        return e.target.parentNode.parentNode;
+    } else return null;
+}
+
+const getTileFromCoordinates = (x, y) => {
+    const list = document.elementsFromPoint(x, y);
+    for(let i = 0; i < list.length; ++i) if(list[i].className === "chessTile") return list[i];
+    return null;
+}
+
+const withinBoard = (x, y) => 0 <= x && x <= 7 && 0 <= y && y <= 7;
+
+const isOccupied = (board, x, y) => withinBoard(x, y) && board[[x,y]][0] !== null;
+
+const isOccupiedByBlack = (board, x, y) => withinBoard(x, y) && isOccupied(board, x, y) && !getSide(board[[x,y]][0]);
+
+const isOccupiedByWhite = (board, x, y) => withinBoard(x, y) && isOccupied(board, x, y) && getSide(board[[x,y]][0]);
+
+const squareIsAttacked = (board, side, x, y) => {
+    // call isValidMove with the defaults set so it knows to not move anything and just use the x, y given
+    return !isLegalMove(board, side, null, null, [x,y]);
+}
+
+
+const getAllPossibleMovesFromSquare = (board, selectedSquare, checkLegality=true) => {
+    var x = parseInt(selectedSquare[0]);
+    var y = parseInt(selectedSquare[2]);
+    var selectedPiece = board[[x,y]][0];
+    const side = getSide(selectedPiece);
+    let ans = []
     
-    return <div
-            draggable="true"
-            style={{
-              float: "left",
-              height: "12.5%",
-              width: "12.5% ",
-              backgroundColor: color,
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              opacity: selected || reachable ? 0.75 : 1,
-              boxShadow: "black",
-              }}
-              onMouseOver={(e) => e.currentTarget.style.opacity = 0.75}
-              onMouseDown={(e) => this.props.makeMove(this.props.x, this.props.y)}
-              onMouseOut={(e) => selected || reachable ? null : e.currentTarget.style.opacity = 1}
-            >
-              {this.props.piece[0] ? <img
-                src={lookup[this.props.piece[0] + this.props.piece[1]]}
-                //src={process.env.PUBLIC_URL + getIcon(this.props.piece[0], this.props.piece[1])} 
-                style={{
-                width: "75%",
-                height: "75%",
-                cursor: "pointer"
-                }}></img> : null}
-            </div>;
-  }
+    if(selectedPiece == "pawnp") {
+        if(!isOccupied(board, x-1, y) && withinBoard(x-1, y)) {
+            ans.push([x-1,y]);
+            if(x == "6" && !isOccupied(board, x-2, y)) ans.push([x-2,y]);
+        }
+        if(isOccupiedByBlack(board, x-1, y-1)) ans.push([x-1,y-1]);
+        if(isOccupiedByBlack(board, x-1, y+1)) ans.push([x-1,y+1]);
+    }
+
+    if(selectedPiece == "pawno") {
+        if(!isOccupied(board, x+1, y) && withinBoard(x+1, y)) {
+            ans.push([x+1,y]);
+            if(x == "1" && !isOccupied(board, x+2, y)) ans.push([x+2,y]);
+        }
+        if(isOccupiedByWhite(board, x+1, y-1)) ans.push([x+1,y-1]);
+        if(isOccupiedByWhite(board, x+1, y+1)) ans.push([x+1,y+1]);
+    }
+
+    if(selectedPiece == "knightp" || selectedPiece == "knighto") {
+        const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
+        const possibleMoves = [[1,2], [1,-2], [-1,2], [-1,-2], [2,1], [-2,1], [2,-1], [-2,-1]];
+        for(let i = 0; i < possibleMoves.length; ++i) {
+            const [diffx, diffy] = possibleMoves[i];
+            if(checkOccupied(board, diffx + x, diffy + y)) ans.push([diffx+x,diffy+y]) 
+        }
+    }
+
+    if(selectedPiece == "bishopp" || selectedPiece == "bishopo" || selectedPiece == "queenp" || selectedPiece == "queeno") {        
+        const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
+        const otherSideOccupied = side ? isOccupiedByBlack : isOccupiedByWhite;
+        const possibleMoves = [[1,1], [-1, 1], [1,-1], [-1,-1]];
+        for(let i = 0; i < possibleMoves.length; ++i) {
+            const [diffx, diffy] = possibleMoves[i];
+            let m = 1;
+            while(checkOccupied(board, m * diffx + x, m * diffy + y)) {
+                ans.push([m*diffx+x,m*diffy+y]);
+                if(otherSideOccupied(board, m * diffx + x, m * diffy + y)) break;
+                m += 1;
+            }
+        }
+    }
+
+    if(selectedPiece == "rookp" || selectedPiece == "rooko" || selectedPiece == "queenp" || selectedPiece == "queeno") {        
+        const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
+        const otherSideOccupied = side ? isOccupiedByBlack : isOccupiedByWhite;
+        const possibleMoves = [[0,1], [0,-1], [1,0], [-1,0]];
+        for(let i = 0; i < possibleMoves.length; ++i) {
+            const [diffx, diffy] = possibleMoves[i];
+            let m = 1;
+            while(checkOccupied(board, m * diffx + x, m * diffy + y)) {
+                ans.push([m*diffx+x,m*diffy+y]);
+                if(otherSideOccupied(board, m * diffx + x, m * diffy + y)) break;
+                m += 1;
+            }
+        }
+    }
+
+    if(selectedPiece == "kingp" || selectedPiece == "kingo") {        
+        const checkOccupied = side ? (b, x, y) => withinBoard(x, y) && !isOccupiedByWhite(b, x, y)  : (b, x, y) => withinBoard(x, y) && !isOccupiedByBlack(b, x, y);
+        const possibleMoves = [[0,1], [0,-1], [1,0], [-1,0], [-1,-1], [1,-1], [-1,1], [1,1]];
+        for(let i = 0; i < possibleMoves.length; ++i) {
+            const [diffx, diffy] = possibleMoves[i];
+            if(checkOccupied(board, diffx + x, diffy + y)) {
+                ans.push([diffx+x,diffy+y]);
+            }
+        }
+    }
+
+    // find castle moves
+    if(selectedPiece == "kingp") {
+        if(board["pCastleQueen"][0] && !isOccupied(board, 7, 1) && !isOccupied(board, 7, 2) && !isOccupied(board, 7, 3)) {
+                // additionally check that no piece is attacking the [7,2], [7,3], [7,4] (checking 7,4 is equivalent to the king being in check)
+                let validCastle = true;
+                for(let i = 2; i <= 4; ++i) {
+                    if(squareIsAttacked(board, side, 7, i)) validCastle = false;
+                }
+                if(validCastle) ans.push([7,0,"specialMove"]);
+        }
+
+        if(board["pCastleKing"][0] && !isOccupied(board, 7, 5) && !isOccupied(board, 7, 6)) {
+            // additionally check that no piece is attacking the [7,4], [7,5], [7,6] (checking 7,4 is equivalent to the king being in check)
+            let validCastle = true;
+            for(let i = 4; i <= 6; ++i) {
+                if(squareIsAttacked(board, side, 7, i)) validCastle = false;
+            }
+            if(validCastle) ans.push([7,7,"specialMove"]);
+        }
+    }
+
+    if(selectedPiece == "kingo") {
+        if(board["oCastleQueen"][0] && !isOccupied(board, 0, 1) && !isOccupied(board, 0, 2) && !isOccupied(board, 0, 3)) {
+                // additionally check that no piece is attacking the [0,2], [0,3], [0,4] (checking 0,4 is equivalent to the king being in check)
+                let validCastle = true;
+                for(let i = 2; i <= 4; ++i) {
+                    if(squareIsAttacked(board, side, 0, i)) validCastle = false;
+                }
+                if(validCastle) ans.push([0,0,"specialMove"]);
+        }
+
+        if(board["oCastleKing"][0] && !isOccupied(board, 0, 5) && !isOccupied(board, 0, 6)) {
+            // additionally check that no piece is attacking the [0,4], [0,5], [0,6] (checking 0,4 is equivalent to the king being in check)
+            let validCastle = true;
+            for(let i = 4; i <= 6; ++i) {
+                if(squareIsAttacked(board, side, 0, i)) validCastle = false;
+            }
+            if(validCastle) ans.push([0,7,"specialMove"]);
+        }   
+    }
+
+            
+
+
+
+
+    if(checkLegality) {
+        let legalAns = []
+        for(let i = 0; i < ans.length; ++i) {
+            if(ans[i].length === 3) {
+                legalAns.push(ans[i]); // make moves that are already known to be legal have length 3
+            }
+            else if(isLegalMove(board, side, [selectedSquare[0], selectedSquare[2]], ans[i])) legalAns.push(ans[i]);
+        }
+        return legalAns;
+    } else {
+        return ans;
+    }
+}
+
+const isLegalMove = (board, side, startSquare, endSquare, override=null) => {
+
+    // make the move, then do a scan for possible rooks, bishops or knights that could attack the square
+    let newBoard = {}
+    for(let i = 0; i <= 7; ++i) {
+        for(let j = 0; j <= 7; ++j) {
+            newBoard[[i,j]] = board[[i,j]][0];
+        }
+    }
+
+    if(override === null) {
+        alterBoard(newBoard, startSquare, endSquare);
+
+        var kingSquare = null;
+
+        // find king square
+        for(let i = 0; i <= 7; ++i) {
+            for(let j = 0; j <= 7; ++j) {
+                if((newBoard[[i,j]] == "kingp" || newBoard[[i,j]] == "kingo") && getSide(newBoard[[i,j]]) == side) {
+                    kingSquare = [i,j];
+                }
+            }
+        }
+
+        var x = kingSquare[0];
+        var y = kingSquare[1];
+
+    } else {
+        var x = override[0];
+        var y = override[1];
+    }
+
+
+    const isOutOfBounds = (i, j) => i < 0 || i > 7 || j < 0 || j > 7; 
+    const notOccupied = (i, j) => !isOutOfBounds(i,j) && newBoard[[i,j]] === null;
+
+    // check for knight captures
+
+    const isOppositeKnight = side ? 
+    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == "knighto" 
+    : 
+    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == "knightp";
+    const possibleKnightMoves = [[1,2], [1,-2], [-1,2], [-1,-2], [2,1], [-2,1], [2,-1], [-2,-1]]
+    for(let i = 0; i < possibleKnightMoves.length; ++i) {
+        const [diffx, diffy] = possibleKnightMoves[i];
+        if(isOppositeKnight(diffx + x,diffy + y)) return false;
+    }
+
+    // check for rook captures
+
+    const isOppositeRookorQueen = side ? 
+    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == "rooko" || newBoard[[i,j]] == "queeno")
+     : 
+    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == "rookp" || newBoard[[i,j]] == "queenp");
+    const possibleRookMoves = [[0,1], [0,-1], [1,0], [-1,0]];
+    for(let i = 0; i < possibleRookMoves.length; ++i) {
+        const [diffx, diffy] = possibleRookMoves[i];
+        let m = 1;
+        while(notOccupied(m * diffx + x, m * diffy + y)) m += 1;
+        if(isOppositeRookorQueen(m * diffx + x, m * diffy + y)) return false;
+    }
+
+
+    // check for bishop captures
+
+    const isOppositeBishoporQueen = side ? 
+    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == "bishopo" || newBoard[[i,j]] == "queeno")
+    :
+    (i, j) => !isOutOfBounds(i, j) && (newBoard[[i,j]] == "bishopp" || newBoard[[i,j]] == "queenp");
+    const possibleBishopMoves = [[-1,1], [-1,-1], [1,1], [1,-1]];
+    for(let i = 0; i < possibleBishopMoves.length; ++i) {
+        const [diffx, diffy] = possibleBishopMoves[i];
+        let m = 1;
+        while(notOccupied(m * diffx + x, m * diffy + y)) m += 1;
+        if(isOppositeBishoporQueen(m * diffx + x, m * diffy + y)) return false;
+    }
+
+    // check for pawn captures
+
+    const isOppositePawn = side ? 
+    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == "pawno"
+    :
+    (i, j) => !isOutOfBounds(i, j) && newBoard[[i,j]] == "pawnp"
+    const possiblePawnMoves =  side ? 
+    [[-1,1], [-1,-1]]
+    :
+    [[1,1], [1,-1]]
+    for(let i = 0; i < possiblePawnMoves.length; ++i) {
+        const [diffx, diffy] = possiblePawnMoves[i];
+        if(isOppositePawn(diffx + x,diffy + y)) return false;
+    }
+
+    
+
+    return true;
 }
 
 
-var initialPositionMap = {
-  0: "rook",
-  1: "knight",
-  2: "bishop",
-  3: "queen",
-  4: "king",
-  5: "bishop",
-  6: "knight",
-  7: "rook",
+// board must be a copy and not the actual board state from useBoard, this will be enforced anyways because it is 
+// indexed differently
+const alterBoard = (board, startSquare, endSquare) => {
+    // for now, just move startSquare to endSquare, this will need to be more sophisticated later
+    const piece = board[startSquare];
+    board[startSquare] = null;
+    board[endSquare] = piece;
 }
 
-var arraysEqual = function(arr1, arr2) {
-  if(arr1.length != arr2.length) return false;
-  for(var i = 0; i < arr1.length; ++i) if(arr1[i] != arr2[i]) return false;
-  return true;
+const getSide = (piece) => {
+    return piece == "kingp" ||
+        piece == "queenp" ||
+        piece == "bishopp" ||
+        piece == "knightp" ||
+        piece == "rookp" ||
+        piece == "pawnp";
 }
+
+const isPossibleMove = (selectedSquare, currentSquare, possibleMoves) => {
+    if(possibleMoves && selectedSquare) return possibleMoves[selectedSquare].some(move => move[0] == currentSquare[0] && move[1] == currentSquare[1]);
+    else return false;
+}
+
+const pieceIsInCheck = (piece, sideToPlay, isInCheck) => (piece == "kingp" || piece == "kingo") && isInCheck && getSide(piece) == sideToPlay;
+
+const moveEquals = (arr, x, y) => arr[0] == x && arr[1] == y;
+
+const makeMove = (board, startSquare, piece, droppedSquare, setSelectedSquare, setSideToPlay) => {
+    
+    if(piece == "kingp" && moveEquals(startSquare, 7, 4) && moveEquals(droppedSquare, 7, 0)) {
+        board[[7,4]][1](null);
+        board[[7,0]][1](null);
+        board[[7,2]][1]("kingp");
+        board[[7,3]][1]("rookp");
+        moveSoundVar.play();
+    } else if (piece == "kingp" && moveEquals(startSquare, 7, 4) && moveEquals(droppedSquare, 7, 7)) {
+        board[[7,4]][1](null);
+        board[[7,7]][1](null);
+        board[[7,6]][1]("kingp");
+        board[[7,5]][1]("rookp");
+        moveSoundVar.play();
+    }  else if (piece == "kingo" && moveEquals(startSquare, 0, 4) && moveEquals(droppedSquare, 0, 0)) {
+        board[[0,4]][1](null);
+        board[[0,0]][1](null);
+        board[[0,2]][1]("kingo");
+        board[[0,3]][1]("rooko");
+        moveSoundVar.play();
+    } else if (piece == "kingo" && moveEquals(startSquare, 0, 4) && moveEquals(droppedSquare, 0, 7)) {
+        board[[0,4]][1](null);
+        board[[0,7]][1](null);
+        board[[0,6]][1]("kingo");
+        board[[0,5]][1]("rooko");
+        moveSoundVar.play();
+    } else {
+        board[startSquare][1](null);
+        board[droppedSquare][1](piece);
+        if(board[droppedSquare][0]) takeSoundVar.play();
+        else moveSoundVar.play();
+    }
+    setSelectedSquare([null, 0, 0, false]);
+    setSideToPlay(sideToPlay => !sideToPlay);
+
+    if(piece == "kingp") {
+        board["pCastleQueen"][1](false);
+        board["pCastleKing"][1](false);
+    } else if (piece == "kingo") {
+        board["oCastleQueen"][1](false);
+        board["oCastleKing"][1](false);
+    } else if (piece == "rookp" && moveEquals(startSquare, 7, 0)) {
+        board["pCastleQueen"][1](false);
+    } else if (piece == "rookp" && moveEquals(startSquare, 7, 7)) {
+        board["pCastleKing"][1](false);
+    } else if (piece == "rooko" && moveEquals(startSquare, 0, 0)) {
+        board["oCastleQueen"][1](false);
+    } else if (piece == "rooko" && moveEquals(startSquare, 0, 7)) {
+        board["oCastleKing"][1](false);
+    }
+
+}
+
+const addClickable = (el, board, setSelectedSquare, setSideToPlay, setLastMove) => {
+    el.style.cursor = "pointer";
+    el.onmouseenter = () => el.style.backgroundColor = getColor2(el.id[0], el.id[2]);
+    el.onmouseleave = () => el.style.backgroundColor = getColor(el.id[0], el.id[2]);
+    el.onpointerdown  = (e) => {
+        el.style.backgroundColor = getColor(el.id[0], el.id[2]);
+        let tile = getTileFromEvent(e);
+        let startPiece = document.getElementsByClassName("selectedPiece")[0];
+        const startSquare = [startPiece.id[6], startPiece.id[8]];
+        const droppedSquare = [tile.id[0], tile.id[2]]
+        makeMove(board, startSquare, board[startSquare][0], droppedSquare, setSelectedSquare, setSideToPlay);
+        setLastMove([startSquare, droppedSquare]);
+    };
+}
+    
+
+const removeClickable = (el) => {
+    el.style.cursor = "default";
+    el.onmouseenter = null;
+    el.onmouseleave = null;
+    el.onpointerdown = null;
+}
+
 
 var getBoardRepresentation = function(board) {
-  var s = '';
-  for(var num = 63; num >= 0; num--) {
-    var i = Math.floor(num/8);
-    var j = (7 - (num % 8)) % 8;
-    if(arraysEqual(board[[i,j]],["pawn", "white"])) s += 'P'
-    else if(arraysEqual(board[[i,j]],["knight", "white"])) s += 'H'
-    else if(arraysEqual(board[[i,j]],["bishop", "white"])) s += 'B'
-    else if(arraysEqual(board[[i,j]],["rook", "white"])) s += 'R'
-    else if(arraysEqual(board[[i,j]],["queen", "white"])) s += 'Q'
-    else if(arraysEqual(board[[i,j]],["king", "white"])) s += 'K'
-
-    else if(arraysEqual(board[[i,j]],["pawn", "black"])) s += 'O'
-    else if(arraysEqual(board[[i,j]],["knight", "black"])) s += 'L'
-    else if(arraysEqual(board[[i,j]],["bishop", "black"])) s += 'D'
-    else if(arraysEqual(board[[i,j]],["rook", "black"])) s += 'C'
-    else if(arraysEqual(board[[i,j]],["queen", "black"])) s += 'W'
-    else if(arraysEqual(board[[i,j]],["king", "black"])) s += 'I'
-    else s += '_';
+    var s = '';
+    for(var num = 63; num >= 0; num--) {
+      var i = Math.floor(num/8);
+      var j = (7 - (num % 8)) % 8;
+      if(board[[i,j]][0] == "pawnp") s += 'P'
+      else if(board[[i,j]][0] == "knightp") s += 'H'
+      else if(board[[i,j]][0] == "bishopp") s += 'B'
+      else if(board[[i,j]][0] == "rookp") s += 'R'
+      else if(board[[i,j]][0] == "queenp") s += 'Q'
+      else if(board[[i,j]][0] == "kingp") s += 'K'
+  
+      else if(board[[i,j]][0] == "pawno") s += 'O'
+      else if(board[[i,j]][0] == "knighto") s += 'L'
+      else if(board[[i,j]][0] == "bishopo") s += 'D'
+      else if(board[[i,j]][0] == "rooko") s += 'C'
+      else if(board[[i,j]][0] == "queeno") s += 'W'
+      else if(board[[i,j]][0] == "kingo") s += 'I'
+      else s += '_';
+    }
+    return s;
   }
-  return s;
+
+
+const noPossibleMoves = (board, possibleMoves, sideToPlay) => {
+    for(let i = 0; i <= 7; ++i) {
+        for(let j = 0; j <= 7; ++j) {
+            if(getSide(board[[i,j]][0]) === sideToPlay && possibleMoves["piece-" + i + "-" + j].length > 0) {
+                return false;
+            }
+        }
+    }
+    return true;
 }
 
 
+const mapper = (pos) => {
+    if(pos == 0) return 7;
+    if(pos == 1) return 6;
+    if(pos == 2) return 5;
+    if(pos == 3) return 4;
+    if(pos == 4) return 3;
+    if(pos == 5) return 2;
+    if(pos == 6) return 1;
+    if(pos == 7) return 0;
+}
 
-class Board extends React.Component {
+const Modal = (props) => {
 
-  constructor(props) {
-    super(props);
-    var board = {}
-    for(var i = 0; i < 8; i++) {
-      board[[0,i]] = [initialPositionMap[i], "black"];
-      board[[1,i]] = ["pawn", "black"];
-      board[[2,i]] = [null, null];
-      board[[3,i]] = [null, null];
-      board[[4,i]] = [null, null];
-      board[[5,i]] = [null, null];
-      board[[6,i]] = ["pawn", "white"];
-      board[[7,i]] = [initialPositionMap[i], "white"];
-    }
-    this.state = {
-      selected: [null, null],
-      board: board,
-      sideToPlay: "white",
-      selectedPiece: null,
-      blackCanCastleQueenSide: true,
-      blackCanCastleKingSide: true,
-      whiteCanCastleQueenSide: true,
-      whiteCanCastleKingSide: true
-    }
-    var allPossibleMoves = this.getAllPossibleMoves(this.state, true)
-    this.state.allPossibleMoves = allPossibleMoves
-    this.moveSound = new Audio(moveSound)
-    this.takeSound = new Audio(takeSound)
-
-
-  }
-
-
-  whiteCanCastleQueenSideCheck = (state) => {
-    var emptySquare = (i,j) => !state.board[[i,j]][0]
-    var condition = state.whiteCanCastleQueenSide
-    condition = condition && emptySquare(7, 1)
-    condition = condition && emptySquare(7, 2)
-    condition = condition && emptySquare(7, 3)
-    return condition
-  }
-
-  whiteCanCastleKingSideCheck = (state) => {
-    var emptySquare = (i,j) => !state.board[[i,j]][0]
-    var condition = state.whiteCanCastleKingSide
-    condition = condition && emptySquare(7, 6)
-    condition = condition && emptySquare(7, 5)
-    return condition
-  }
-
-  blackCanCastleQueenSideCheck = (state) => {
-    var emptySquare = (i,j) => !state.board[[i,j]][0]
-    var condition = state.blackCanCastleQueenSide
-    condition = condition && emptySquare(0, 1)
-    condition = condition && emptySquare(0, 2)
-    condition = condition && emptySquare(0, 3)
-    return condition
-  }
-
-  blackCanCastleKingSideCheck = (state) => {
-    var emptySquare = (i,j) => !state.board[[i,j]][0]
-    var condition = state.blackCanCastleKingSide
-    condition = condition && emptySquare(0, 6)
-    condition = condition && emptySquare(0, 5)
-    return condition
-  }
-
-  getReachablePieces = (state, checkLegality) => {
-    var validLocation = (i,j) => (((0 <= i) && (i <= 7) && (0 <= j) && (j <= 7)) && state.board[[i,j]][1] != state.sideToPlay)
-    var inBounds = (i,j) => ((0 <= i) && (i <= 7) && (0 <= j) && (j <= 7))
-
-    var ans = []
-    var x = state.selected[0]
-    var y = state.selected[1]
-
-    if(state.selectedPiece == "knight") {
-
-      if(validLocation(x+2,y-1)) ans.push([x+2,y-1])
-      if(validLocation(x+2,y+1)) ans.push([x+2,y+1])
-      if(validLocation(x-2,y+1)) ans.push([x-2,y+1])
-      if(validLocation(x-2,y-1)) ans.push([x-2,y-1])
-
-      if(validLocation(x+1,y+2)) ans.push([x+1,y+2])
-      if(validLocation(x+1,y-2)) ans.push([x+1,y-2])
-      if(validLocation(x-1,y+2)) ans.push([x-1,y+2])
-      if(validLocation(x-1,y-2)) ans.push([x-1,y-2])
-
-
-    } if(state.selectedPiece == "bishop" || state.selectedPiece == "queen") {
-
-      var k = 1
-      while(validLocation(x+k, y+k)) {
-        ans.push([x+k,y+k])
-        if(state.board[[x+k,y+k]][1] && state.board[[x+k,y+k]][1] != state.sideToPlay) break
-        k += 1
-      }
-      k = 1
-      while(validLocation(x-k, y+k)) {
-        ans.push([x-k,y+k])
-        if(state.board[[x-k,y+k]][1] && state.board[[x-k,y+k]][1] != state.sideToPlay) break
-        k += 1
-      }
-      k = 1
-      while(validLocation(x+k, y-k)) {
-        ans.push([x+k,y-k])
-        if(state.board[[x+k,y-k]][1] && state.board[[x+k,y-k]][1] != state.sideToPlay) break
-        k += 1
-      }
-      k = 1
-      while(validLocation(x-k, y-k)) {
-        ans.push([x-k,y-k])
-        if(state.board[[x-k,y-k]][1] && state.board[[x-k,y-k]][1] != state.sideToPlay) break
-        k += 1
-      }
-
-    } if(state.selectedPiece == "rook" || state.selectedPiece == "queen") {
-      var k = 1
-      while(validLocation(x+k, y)) {
-        ans.push([x+k,y])
-        if(state.board[[x+k,y]][1] && state.board[[x+k,y]][1] != state.sideToPlay) break
-        k += 1
-      }
-      k = 1
-      while(validLocation(x-k, y)) {
-        ans.push([x-k,y])
-        if(state.board[[x-k,y]][1] && state.board[[x-k,y]][1] != state.sideToPlay) break
-        k += 1
-      }
-      k = 1
-      while(validLocation(x, y-k)) {
-        ans.push([x,y-k])
-        if(state.board[[x,y-k]][1] && state.board[[x,y-k]][1] != state.sideToPlay) break
-        k += 1
-      }
-      k = 1
-      while(validLocation(x, y+k)) {
-        ans.push([x,y+k])
-        if(state.board[[x,y+k]][1] && state.board[[x,y+k]][1] != state.sideToPlay) break
-        k += 1
-      }
-
-    } if(state.selectedPiece == "pawn") {
-      if(state.sideToPlay == "white") {
-        if(validLocation(x-1,y) && !(state.board[[x-1,y]][1] && state.board[[x-1,y]][1] != state.sideToPlay)) ans.push([x-1,y])
-        if(inBounds(x-2, y) && state.selected[0] == 6 && !(state.board[[x-2,y]][1] && state.board[[x-2,y]][1] != state.sideToPlay)) if(validLocation(x-2,y)) ans.push([x-2,y])
-        if(inBounds(x-1, y+1) && state.board[[x-1,y+1]][1] && state.board[[x-1,y+1]][1] != state.sideToPlay) ans.push([x-1,y+1])
-        if(inBounds(x-1, y-1) && state.board[[x-1,y-1]][1] && state.board[[x-1,y-1]][1] != state.sideToPlay) ans.push([x-1,y-1])
-      } else {
-        if(validLocation(x+1,y) && !(state.board[[x+1,y]][1] && state.board[[x+1,y]][1] != state.sideToPlay)) ans.push([x+1,y])
-        if(inBounds(x+2, y) &&  x == 1 && !(state.board[[x+2,y]][1] && state.board[[x+2,y]][1] != state.sideToPlay)) if(validLocation(x+2,y)) ans.push([x+2,y])
-        if(inBounds(x+1, y+1) && state.board[[x+1,y+1]][1] && state.board[[x+1,y+1]][1] != state.sideToPlay) ans.push([x+1,y+1])
-        if(inBounds(x+1, y-1) && state.board[[x+1,y-1]][1] && state.board[[x+1,y-1]][1] != state.sideToPlay) ans.push([x+1,y-1])
-      }
-    } if(state.selectedPiece == "king") {
-      if(validLocation(x+1,y)) ans.push([x+1,y])
-      if(validLocation(x-1,y)) ans.push([x-1,y])
-      if(validLocation(x,y+1)) ans.push([x,y+1])
-      if(validLocation(x,y-1)) ans.push([x,y-1])
-
-      if(validLocation(x+1,y+1)) ans.push([x+1,y+1])
-      if(validLocation(x-1,y+1)) ans.push([x-1,y+1])
-      if(validLocation(x+1,y-1)) ans.push([x+1,y-1])
-      if(validLocation(x-1,y-1)) ans.push([x-1,y-1])
-
-      // Check for castles
-
-      if(state.sideToPlay == "white") {
-        if(this.whiteCanCastleQueenSideCheck(state)) ans.push([7,0])
-        if(this.whiteCanCastleKingSideCheck(state)) ans.push([7,7])
-      } else {
-        if(this.blackCanCastleQueenSideCheck(state)) ans.push([0,0])
-        if(this.blackCanCastleKingSideCheck(state)) ans.push([0,7])
-      }
-
-
-
-
+    const style = {
+        zIndex: props.isOpen !== null ? 1 : -1,
+        backgroundColor: props.isOpen !== null ? "rgb(0,0,0,0.5)" : "rgb(0,0,0,0)"
     }
 
-    if(checkLegality) { // We don't have to check legality for moves that lead to checkmate, that is why we don't have to recurse
-      var legalAnswer = []
-      for(var i = 0; i < ans.length; ++i) { // filter out moves that are illegal
-        if(isInPossibleMoves([state.selected, ans[i]], state.allPossibleMoves)) legalAnswer.push(ans[i])
-      }
-      return legalAnswer
+    let butttonStyles = [];
+    for(let i = 0; i < 4; ++i) {
+        let newStyle = {};
+        if(i == 0) {
+            newStyle["top"] = 0;
+            newStyle["left"] = 0;
+        } else if (i == 1) {
+            newStyle["top"] = 0;
+            newStyle["right"] = 0;
+        } else if (i == 2) {
+            newStyle["bottom"] = 0;
+            newStyle["left"] = 0;
+        } else if (i == 3) {
+            newStyle["bottom"] = 0;
+            newStyle["right"] = 0;
+        }
+        butttonStyles.push(newStyle);
     }
 
-    return ans
-
-  }
-
-  alterBoard = (board, initialLoc, endingLoc) => {
-    var newBoard = board
-    var currentPiece = newBoard[initialLoc][0]
-    var currentSide = newBoard[initialLoc][1]
-    var castle = board[initialLoc][0] == "king" && board[endingLoc][0] == "rook" && board[endingLoc][1] == board[initialLoc][1]
-    if(castle && arraysEqual(endingLoc,[7,0])) {
-      newBoard[[7,4]] = [null, null]
-      newBoard[[7,0]] = [null, null]
-      newBoard[[7,3]] = ["rook", "white"]
-      newBoard[[7,2]] = ["king", "white"]
-    } else if(castle && arraysEqual(endingLoc,[7,7])) {
-      newBoard[[7,4]] = [null, null]
-      newBoard[[7,7]] = [null, null]
-      newBoard[[7,5]] = ["rook", "white"]
-      newBoard[[7,6]] = ["king", "white"]
-    } else {
-      newBoard[initialLoc] = [null, null]
-      newBoard[endingLoc] = [currentPiece, currentSide]
+    const getPiece = (num) => {
+        const playerPieces = props.playedSide == "white" ? whitePieces : blackPieces;
+        if(num == 0) return !props.isOpen ? playerPieces["queeno"] : playerPieces["queenp"];
+        if(num == 1) return !props.isOpen ? playerPieces["rooko"] : playerPieces["rookp"];
+        if(num == 2) return !props.isOpen ? playerPieces["bishopo"] : playerPieces["bishopp"];
+        if(num == 3) return !props.isOpen ? playerPieces["knighto"] : playerPieces["knightp"];
     }
-    return newBoard
-  }
 
-  isLegalMove = (state, initialLoc, endingLoc) => {
-    var newState = JSON.parse(JSON.stringify(state));
-    newState.board = this.alterBoard(newState.board, initialLoc, endingLoc)
-    newState.sideToPlay = newState.sideToPlay == "white" ? "black" : "white"
-    var possibleResponseMoves = this.getAllPossibleMoves(newState, false)
-    for(var i = 0; i < possibleResponseMoves.length; ++i) {
-      var newPositionSquare = newState.board[possibleResponseMoves[i][1]]
-      if(newPositionSquare[0] == "king" && newPositionSquare[1] == state.sideToPlay) return false
+    var modal = null;
+    if(props.isOpen !== null) {
+        modal = 
+            <div className="modal">
+                {[0,1,2,3].map(num => 
+                    <img 
+                        className="modalButton" 
+                        key={num}
+                        style={butttonStyles[num]} 
+                        src={getPiece(num)} 
+                        onPointerDown={() => props.handleModalClick(num)}>
+                    </img>
+                )
+                }
+            </div>
     }
-    return true
-  }
+
+    return (
+        <div className="modalBackground" style={style}>
+           {modal}
+        </div>
+    )
+
+}
+
+const MemoizedModal = memo(Modal);
 
 
-  getAllPossibleMoves = (state, checkLegality) => {
-    var answer = []
-    for(var i = 0; i <= 7; ++i) {
-      for(var j = 0; j <= 7; ++j) {
-        if(state.board[[i,j]][1] == state.sideToPlay) {
-          var newState = JSON.parse(JSON.stringify(state))
-          newState.selected = [i,j]
-          newState.selectedPiece = state.board[[i,j]][0]
-          var res = this.getReachablePieces(newState, false)
-          for(var k = 0; k < res.length; ++k) {
-            if(checkLegality) {
-              if(this.isLegalMove(state, [i,j], res[k])) answer.push([[i,j], res[k]])
+const Board = (props) => {
+
+    const board = useBoard();
+    const [selectedSquare, setSelectedSquare] = useState([null, 0, 0, false]); //piece, offsetX, offsetY, wasSelectedPreviously
+    const [hoveredSquare, setHoveredSquare] = useState(null);
+    const [sideToPlay, setSideToPlay] = useState(props.playerSide == "white"); // player's side to play iff true
+    const [possibleMoves, setPossibleMoves] = useState(null);
+    const [isInCheck, setIsInCheck] = useState(null);
+    const [modalIsOpen, setModalIsOpen] = useState(null);
+    const [lastMove, setLastMove] = useState(null);
+    const [boardHistory, setBoardHistory] = useState([]);
+    const { websocket, setWebsocket } = useWebSocket();
+
+
+    const handleTileClick = useCallback((e) => {
+        var rect = e.target.getBoundingClientRect();
+        var x = e.clientX - rect.x - rect.width / 2;
+        var y = e.clientY - rect.y - rect.height / 2;
+        setSelectedSquare([e.target.id, x, y, selectedSquare[0] === e.target.id]);
+    }, [selectedSquare])
+
+    const handleTileUnClick = useCallback((e) => {
+        var tile = getTileFromCoordinates(e.clientX, e.clientY);
+        if(tile) {
+            if("piece-" + tile.id == selectedSquare[0]) {
+                if(selectedSquare[3]) setSelectedSquare([null, 0, 0, false]);
+                else setSelectedSquare([selectedSquare[0], 0, 0, true]);
+            } else if(isPossibleMove(selectedSquare[0], [tile.id[0], tile.id[2]], possibleMoves)) {
+                // let handleDrop take care of this case
             } else {
-              answer.push([[i,j], res[k]])
+                setSelectedSquare([null, 0, 0, false])
             }
-          }
-        }
-      }
-    }
-    return answer
-  }
-
-
-
-  makeMove = (x,y) => {
-    var whiteQueenSideCastleMove = this.state.selectedPiece == "king" && arraysEqual([x,y], [7,0]) && this.whiteCanCastleQueenSideCheck(this.state)
-    var whiteKingSideCastleMove = this.state.selectedPiece == "king" && arraysEqual([x,y], [7,7]) && this.whiteCanCastleKingSideCheck(this.state)
-    var castlingMove = whiteQueenSideCastleMove || whiteKingSideCastleMove
-    if(!castlingMove && this.state.board[[x,y]][1] === this.state.sideToPlay) {
-      if(arraysEqual(this.state.selected, [x,y])) this.setState({selected: [null,null], selectedPiece: null}); // unclick selected
-      else this.setState({selected: [x,y], selectedPiece: this.state.board[[x,y]][0]});
-    }
-    else if (this.state.selected[0] != null) { // we are making a move
-      
-      // check if valid move
-      var currentX = this.state.selected[0];
-      var currentY = this.state.selected[1];
-
-      if(reachableContains(this.getReachablePieces(this.state, true), [x, y])) {
-        if(this.state.board[[x,y]][0]) this.takeSound.play()
-        else this.moveSound.play()
-        
-        var newBoard = this.alterBoard(this.state.board, this.state.selected, [x,y]);
-
-        // figure out new rules for castling
-        var whiteQueenCastle = this.state.whiteCanCastleQueenSide
-        var whiteKingCastle = this.state.whiteCanCastleKingSide
-        var blackQueenCastle = this.state.blackCanCastleQueenSide
-        var blackKingCastle = this.state.whiteCanCastleKingSide
-
-        if(this.state.sideToPlay == "white" && this.state.selectedPiece == "king") {
-          whiteQueenCastle = false
-          whiteKingCastle = false
-        }
-
-        if(this.state.sideToPlay == "black" && this.state.selectedPiece == "king") {
-          blackQueenCastle = false
-          blackKingCastle = false
-        }
-
-        if(this.state.selectedPiece == "rook" && arraysEqual([currentX,currentY],[7,0])) {
-          whiteQueenCastle = false
-        }
-
-        if(this.state.selectedPiece == "rook" && arraysEqual([currentX,currentY],[7,7])) {
-          whiteKingCastle = false
-        }
-
-        if(this.state.selectedPiece == "rook" && arraysEqual([currentX,currentY],[0,0])) {
-          blackQueenCastle = false
-        }
-
-        if(this.state.selectedPiece == "rook" && arraysEqual([currentX,currentY],[0,7])) {
-          blackKingCastle = false
-        }
-
-        if(this.state.sideToPlay == "white") {
-          this.setState({
-            board: newBoard,
-            sideToPlay: this.state.sideToPlay == "white" ? "black" : "white",
-            selected: [null, null],
-            selectedPiece: null,
-            whiteCanCastleQueenSide: whiteQueenCastle,
-            whiteCanCastleKingSide: whiteKingCastle,
-            blackCanCastleQueenSide: blackQueenCastle,
-            blackCanCastleKingSide: blackKingCastle,
-          }, () => {
-            this.setState({
-              allPossibleMoves: this.getAllPossibleMoves(this.state, true) 
-            // }, () => axios.post(`https://polar-badlands-38570.herokuapp.com/getMove`, { 'board': getBoardRepresentation(this.state.board)})
-            }, () => axios.post(`http://localhost:5000/getMove`, { 'board': getBoardRepresentation(this.state.board)})
-            .then(res => {
-              var fromX = parseInt(res.data['nextMove'][0]);
-              var fromY = parseInt(res.data['nextMove'][2]);
-              var piece = this.state.board[[7-fromX, fromY]][0];
-              var toX = parseInt(res.data['nextMove'][4]);
-              var toY = parseInt(res.data['nextMove'][6]);
-              this.setState({selected: [7-fromX,fromY], selectedPiece: piece}, () => {
-                this.makeMove(7-toX,toY);
-              })}))})
         } else {
-          this.setState({
-            board: newBoard,
-            sideToPlay: this.state.sideToPlay == "white" ? "black" : "white",
-            selected: [null, null],
-            selectedPiece: null,
-            whiteCanCastleQueenSide: whiteQueenCastle,
-            whiteCanCastleKingSide: whiteKingCastle,
-            blackCanCastleQueenSide: blackQueenCastle,
-            blackCanCastleKingSide: blackKingCastle,
-          }, () => {
-            this.setState({
-            allPossibleMoves: this.getAllPossibleMoves(this.state, true)
-          }, () => {if(arraysEqual([], this.state.allPossibleMoves)) alert("CHECKMATE")})});
+            setSelectedSquare([null, 0, 0, false]);
         }
-      }
-    }
-    else this.setState({selected: [null, null], selectedPiece: null}); // else just reset
-  }
+        setHoveredSquare(null);
+    }, [selectedSquare, possibleMoves])
 
-  render() {
+    const handleTileHoverEnter = useCallback((e) => {
+        const tile = getTileFromEvent(e);
+        setHoveredSquare(tile.id);
+    }, [])
 
-    var reachablePieces = this.getReachablePieces(this.state, true)
+    const handleTileHoverLeave = useCallback((e) => {
+        setHoveredSquare(null);
+    }, [])
+
+    const handleDrop = useCallback((e, droppedTile, isPossibleMove) => {
+        if(isPossibleMove) {
+            makeMove(board, e.dragData.startSquare, e.dragData.piece, droppedTile, setSelectedSquare, setSideToPlay);
+            setLastMove([e.dragData.startSquare, droppedTile]);
+        }
+    }, [board])
+
+    const handleModalClick = useCallback((num) => {
+        // simply find the pawn of interest and change it to the selected piece
+        for(let i = 0; i <= 7; ++i) {
+            if(board[[0,i]][0] == "pawnp") {
+                const piece = ["queenp", "rookp", "bishopp", "knightp"][num];
+                board[[0,i]][1](piece);
+            } else if(board[[7,i]][0] == "pawno") {
+                const piece = ["queeno", "rooko", "bishopo", "knighto"][num];
+                board[[7,i]][1](piece);
+            }
+        }
+        setModalIsOpen(null);
+    }, [board]);
+
+
+    useEffect(() => {
+        if(websocket) {
+            websocket.onmessage = (message) => {
+                const {type, data} = JSON.parse(message.data);
+                if(type === 'move') {
+                    const start = [mapper(data.move[0][0]), data.move[0][1]]
+                    const end = [mapper(data.move[1][0]), data.move[1][1]]
+                    makeMove(board, start, board[start][0], end, setSelectedSquare, setSideToPlay);
+                    setLastMove(null);
+                }
+            }
+        }
+
+    }, [board]);
+
+    useEffect(() => {
+        for(let i = 0; i <= 7; ++i) {
+            if(board[[0,i]][0] == "pawnp") {
+                setModalIsOpen(true);
+            } else if(board[[7,i]][0] == "pawno") {
+                setModalIsOpen(false);
+            }
+        }
+    }, [sideToPlay]);
+
+    useEffect(() => {
+        var newPossibleMoves = {};
+        var isInCheck = false;
+        for(let i = 0; i <= 7; ++i) {
+            for(let j = 0; j <=7; ++j) {
+                newPossibleMoves["piece-" + i + "-" + j] = getAllPossibleMovesFromSquare(board, i + "-" + j);
+                for(let k = 0; k < newPossibleMoves["piece-" + i + "-" + j].length; k++) {
+                    const [x, y] = newPossibleMoves["piece-" + i + "-" + j][k];
+                    if((board[[x,y]][0] == "kingp" || board[[x,y]][0] == "kingo") && getSide(board[[x,y]][0]) == sideToPlay) {
+                        isInCheck = true;
+                    }
+                }
+            }
+        }
+        setPossibleMoves(newPossibleMoves);
+        setIsInCheck(isInCheck);
+        sideToPlay ? root.style.setProperty('--arrowColor', "black") : root.style.setProperty('--arrowColor', "white");
+    }, [sideToPlay, modalIsOpen]);
+
+
+    useEffect(() => {
+        if(!sideToPlay && !props.noBot) {
+            const isDev = process.env.NODE_ENV == "development";
+            const url = isDev ? "http://localhost:5000/getMove" : "https://polar-badlands-38570.herokuapp.com/getMove";
+            axios.post(url, {'board': getBoardRepresentation(board)})
+            .then(res => {
+                const fromX = 7 - parseInt(res.data['nextMove'][0]);
+                const fromY = parseInt(res.data['nextMove'][2]);
+                const piece = board[[fromX, fromY]][0];
+                const toX = 7 - parseInt(res.data['nextMove'][4]);
+                const toY = parseInt(res.data['nextMove'][6]);
+                const startSquare = [fromX, fromY];
+                const droppedSquare = [toX, toY]
+                makeMove(board, startSquare, piece, droppedSquare, setSelectedSquare, setSideToPlay);
+                setLastMove(startSquare, droppedSquare);
+            });
+        } else if(!sideToPlay && websocket && lastMove) { // if we are in two player mode and we made a move
+            websocket.send(JSON.stringify({
+                type: 'move',
+                data: {
+                    move: lastMove
+                }
+            }))
+        }
+    }, [sideToPlay, lastMove]);
+
+
+    // useEffect(() => {
+    //     setBoardHistory(arr => arr.concat(JSON.parse(JSON.stringify(board))));
+    // }, [sideToPlay]);
+
+    useEffect(() => {
+        if(possibleMoves) {
+            const clickableSquares = possibleMoves[selectedSquare[0]];
+            if(clickableSquares) {
+                var els = [];
+                for(let i = 0; i < clickableSquares.length; ++i) {
+                    const [row, col] = clickableSquares[i];
+                    let el = document.getElementById(row + "-" + col);
+                    addClickable(el, board, setSelectedSquare, setSideToPlay, setLastMove);
+                    els.push(el);
+                }
+                return () => {
+                    for(let i = 0; i < els.length; ++i) {
+                        removeClickable(els[i]);
+                    }
+                }
+            }        
+        }
+    }, [selectedSquare])
+
+
     
     return (
-      <div className="Container">
-        {eightByEight.map(pair => <ChessTile
-                                    x={pair[0]}
-                                    y={pair[1]}
-                                    piece={this.state.board[pair]}
-                                    sideToPlay={this.state.sideToPlay}
-                                    makeMove={this.makeMove}
-                                    selected={this.state.selected}
-                                    selectedPiece={this.state.selectedPiece}
-                                    reachable={reachableContains(reachablePieces, [pair[0], pair[1]])}
-                                    />)}
-      </div>
+        <div className="boardContainer">
+            <div className="board" id="boardid">
+                <MemoizedModal isOpen={modalIsOpen} handleModalClick={handleModalClick} playedSide={props.playerSide}/>
+                {eight.map(row => 
+                    eight.map(col => 
+                        <MemoizedChessTile
+                        key={row + col}
+                        row={row} 
+                        col={col}
+                        piece={board[[row,col]][0]}
+                        playerSide={props.playerSide}
+                        isInCheck={pieceIsInCheck(board[[row,col]][0], sideToPlay, isInCheck)}
+                        isOnSideToPlay={getSide(board[[row,col]][0]) === sideToPlay}
+                        selected={selectedSquare[0] === "piece-" + row + "-" + col ? selectedSquare : null}
+                        hovered={hoveredSquare === row + "-" + col}
+                        handleTileClick={handleTileClick}
+                        handleTileUnClick={handleTileUnClick}
+                        handleDrop={handleDrop}
+                        handleTileHoverEnter={handleTileHoverEnter}
+                        handleTileHoverLeave={handleTileHoverLeave}
+                        isPossibleMove={isPossibleMove(selectedSquare[0], [row, col], possibleMoves)}
+                        />
+                    )
+                )}
+            </div>
+        </div>
     );
-  }
-
 }
 
 export default Board;
