@@ -1,8 +1,8 @@
 {
   "files": {
     "main.css": "/chess/static/css/main.21debb55.chunk.css",
-    "main.js": "/chess/static/js/main.5d9464c4.chunk.js",
-    "main.js.map": "/chess/static/js/main.5d9464c4.chunk.js.map",
+    "main.js": "/chess/static/js/main.a1a7bd1d.chunk.js",
+    "main.js.map": "/chess/static/js/main.a1a7bd1d.chunk.js.map",
     "runtime-main.js": "/chess/static/js/runtime-main.95ed2c88.js",
     "runtime-main.js.map": "/chess/static/js/runtime-main.95ed2c88.js.map",
     "static/js/2.926c5d86.chunk.js": "/chess/static/js/2.926c5d86.chunk.js",
@@ -20,6 +20,6 @@
     "static/js/runtime-main.95ed2c88.js",
     "static/js/2.926c5d86.chunk.js",
     "static/css/main.21debb55.chunk.css",
-    "static/js/main.5d9464c4.chunk.js"
+    "static/js/main.a1a7bd1d.chunk.js"
   ]
 }
